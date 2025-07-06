@@ -286,6 +286,55 @@ npm run lint
 }
 ```
 
+## Roadmap / TODO
+
+### High Priority (Quick Wins)
+- [ ] **Performance & Caching Layer** - Redis caching for schemas, records, and query results with TTL and invalidation
+- [ ] **Health Check Endpoint** - `/health` endpoint with Airtable connectivity check for production monitoring
+- [ ] **Natural Language Query Support** - Convert natural language to Airtable formulas (e.g., "customers from California who ordered last month")
+
+### Medium Priority (High Value)
+- [ ] **Field-Level Access Control** - Extend access control to specific fields with masking options
+  ```bash
+  ALLOWED_FIELDS=Customers:Name,Email;Orders:*
+  BLOCKED_FIELDS=*:Password,*:SSN
+  FIELD_MASKING=Email:partial,Phone:full
+  ```
+- [ ] **Schema Migration Tools** - Version control and migration tools for Airtable schemas
+  - `compare_schemas` - Diff between environments
+  - `migrate_schema` - Apply schema changes safely
+  - `backup_schema` - Version control for structures
+- [ ] **Bulk Import/Export** - Enhanced data migration capabilities
+  - Smart CSV import with AI field mapping
+  - Multi-format export (CSV, JSON, Excel)
+  - Full base backup with attachments
+
+### Future Enhancements
+- [ ] **Real-time Change Notifications** - Webhook-based table watching for live updates
+- [ ] **Transaction Support** - Atomic operations with rollback capability
+- [ ] **Smart Data Operations**
+  - Duplicate detection using AI
+  - Data quality checks
+  - Relationship suggestions
+  - Auto field mapping
+- [ ] **Operational Metrics** - Built-in observability with OpenTelemetry
+  - Rate limit tracking
+  - Operation latency metrics
+  - Smart backoff strategies
+- [ ] **Cost Optimization** - API usage tracking and query optimization suggestions
+- [ ] **Enhanced Security**
+  - Request signing with HMAC
+  - Automatic PII detection
+  - Audit logging with compliance exports
+  - Field-level encryption
+- [ ] **Developer Experience**
+  - CLI for setup and management
+  - TypeScript type generation from schemas
+  - Interactive configuration wizard
+
+### Contributing
+Interested in contributing? Check out our [Contributing Guide](CONTRIBUTING.md) and pick an item from the roadmap!
+
 ## License
 
 MIT
