@@ -1,0 +1,66 @@
+name: Sync Deployment Branches
+
+on:
+  push:
+    branches:
+      - main  # Only sync when production code is updated
+  workflow_dispatch:
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        branch:
+          - deploy/zeabur
+          - deploy/docker
+          - deploy/claude-desktop
+          - deploy/remote-sse
+          - deploy/railway
+          
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+      - name: Sync ${{ matrix.branch }}
+        run: |
+          # Check if branch exists
+          if git show-ref --verify --quiet refs/remotes/origin/${{ matrix.branch }}; then
+            echo "Syncing existing branch: ${{ matrix.branch }}"
+            
+            # Checkout the deployment branch
+            git checkout -B ${{ matrix.branch }} origin/${{ matrix.branch }}
+            
+            # Merge main while preserving deployment files
+            git merge main --no-edit --strategy-option=ours \
+              || (git add -A && git commit -m "Merge main into ${{ matrix.branch }}")
+            
+            # Push changes
+            git push origin ${{ matrix.branch }}
+          else
+            echo "Creating new branch: ${{ matrix.branch }}"
+            
+            # Create new branch from main
+            git checkout -b ${{ matrix.branch }}
+            
+            # Create deployment directory
+            mkdir -p deploy/$(basename ${{ matrix.branch }})
+            echo "# $(basename ${{ matrix.branch }}) Deployment" > deploy/$(basename ${{ matrix.branch }})/README.md
+            
+            git add -A
+            git commit -m "Initial deployment setup for ${{ matrix.branch }}" || true
+            git push -u origin ${{ matrix.branch }}
+          fi
+          
+      - name: Return to main
+        if: always()
+        run: git checkout main

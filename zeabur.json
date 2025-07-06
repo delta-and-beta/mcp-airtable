@@ -1,0 +1,101 @@
+{
+  "name": "mcp-airtable",
+  "build": {
+    "type": "docker"
+  },
+  "env": {
+    "PORT": {
+      "default": "3000"
+    },
+    "MCP_AUTH_TOKEN": {
+      "description": "Bearer token for MCP authentication",
+      "required": false
+    },
+    "AIRTABLE_API_KEY": {
+      "description": "Airtable API key",
+      "required": true
+    },
+    "AIRTABLE_BASE_ID": {
+      "description": "Default Airtable base ID",
+      "required": false
+    },
+    "AWS_REGION": {
+      "description": "AWS region for S3",
+      "default": "us-east-1",
+      "required": false
+    },
+    "AWS_S3_BUCKET": {
+      "description": "S3 bucket name for attachments",
+      "required": false
+    },
+    "AWS_ACCESS_KEY_ID": {
+      "description": "AWS access key ID",
+      "required": false
+    },
+    "AWS_SECRET_ACCESS_KEY": {
+      "description": "AWS secret access key",
+      "required": false
+    },
+    "AWS_S3_PUBLIC_URL_PREFIX": {
+      "description": "Custom public URL prefix for S3 files",
+      "required": false
+    },
+    "GCS_BUCKET": {
+      "description": "Google Cloud Storage bucket name",
+      "required": false
+    },
+    "GCS_PROJECT_ID": {
+      "description": "Google Cloud project ID",
+      "required": false
+    },
+    "GCS_KEY_FILE": {
+      "description": "Path to GCS service account key file",
+      "required": false
+    },
+    "GCS_CLIENT_EMAIL": {
+      "description": "GCS service account email",
+      "required": false
+    },
+    "GCS_PRIVATE_KEY": {
+      "description": "GCS service account private key",
+      "required": false
+    },
+    "GCS_PUBLIC_URL_PREFIX": {
+      "description": "Custom public URL prefix for GCS files",
+      "required": false
+    },
+    "REDIS_URL": {
+      "description": "Redis connection URL",
+      "required": false
+    },
+    "REDIS_HOST": {
+      "description": "Redis host",
+      "default": "localhost",
+      "required": false
+    },
+    "REDIS_PORT": {
+      "description": "Redis port",
+      "default": "6379",
+      "required": false
+    },
+    "REDIS_PASSWORD": {
+      "description": "Redis password",
+      "required": false
+    },
+    "QUEUE_CONCURRENCY": {
+      "description": "Number of concurrent queue workers",
+      "default": "5",
+      "required": false
+    },
+    "NODE_ENV": {
+      "description": "Node environment",
+      "default": "production",
+      "required": false
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level (debug, info, warn, error)",
+      "default": "info",
+      "required": false
+    }
+  }
+}
