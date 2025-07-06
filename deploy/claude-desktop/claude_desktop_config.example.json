@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "mcp-airtable-zeabur": {
+      "transport": {
+        "type": "sse",
+        "url": "https://your-app-name.zeabur.app/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_MCP_AUTH_TOKEN_HERE"
+        }
+      },
+      "env": {
+        "AIRTABLE_API_KEY": "patXXXXXXXXXXXXXX",
+        "AIRTABLE_BASE_ID": "appXXXXXXXXXXXXXX"
+      }
+    }
+  }
+}
