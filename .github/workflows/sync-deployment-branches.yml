@@ -9,8 +9,12 @@ on:
 jobs:
   sync-branches:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     
     strategy:
+      fail-fast: false
       matrix:
         branch:
           - deploy/zeabur
@@ -25,6 +29,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
           
       - name: Configure Git
         run: |
@@ -33,8 +38,11 @@ jobs:
           
       - name: Sync ${{ matrix.branch }}
         run: |
-          # Check if branch exists
-          if git show-ref --verify --quiet refs/remotes/origin/${{ matrix.branch }}; then
+          # Fetch all branches
+          git fetch origin
+          
+          # Check if branch exists on remote
+          if git ls-remote --heads origin | grep -q "refs/heads/${{ matrix.branch }}"; then
             echo "Syncing existing branch: ${{ matrix.branch }}"
             
             # Checkout the deployment branch
@@ -52,12 +60,22 @@ jobs:
             # Create new branch from main
             git checkout -b ${{ matrix.branch }}
             
-            # Create deployment directory
-            mkdir -p deploy/$(basename ${{ matrix.branch }})
-            echo "# $(basename ${{ matrix.branch }}) Deployment" > deploy/$(basename ${{ matrix.branch }})/README.md
+            # Create deployment directory if needed
+            deployment_name=$(echo "${{ matrix.branch }}" | sed 's|deploy/||')
+            mkdir -p "deploy/${deployment_name}"
+            echo "# ${deployment_name} Deployment Configuration" > "deploy/${deployment_name}/README.md"
+            echo "" >> "deploy/${deployment_name}/README.md"
+            echo "This directory contains deployment-specific configurations for ${deployment_name}." >> "deploy/${deployment_name}/README.md"
             
-            git add -A
-            git commit -m "Initial deployment setup for ${{ matrix.branch }}" || true
+            # Only commit if there are changes
+            if git diff --staged --quiet; then
+              git add -A
+              if ! git diff --staged --quiet; then
+                git commit -m "Initial deployment setup for ${{ matrix.branch }}"
+              fi
+            fi
+            
+            # Push new branch
             git push -u origin ${{ matrix.branch }}
           fi
           
