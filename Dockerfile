@@ -32,9 +32,6 @@ RUN npm ci --only=production
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy any deployment-specific configs if they exist
-COPY deploy/zeabur/config.example.json ./deploy/zeabur/config.example.json || true
-
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
