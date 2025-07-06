@@ -30,6 +30,8 @@ BLOCKED_TABLES=Passwords,PersonalInfo,Salaries
 BLOCKED_BASES=appSensitiveHR
 ```
 
+**⚠️ Default Behavior**: If no access control variables are configured, the AI has access to ALL bases, tables, and views. Always configure access control for production deployments.
+
 This prevents the AI from accessing sensitive data. See [Access Control Guide](docs/guides/access-control.md) for details.
 
 ## Installation
