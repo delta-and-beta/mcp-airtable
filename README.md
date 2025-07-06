@@ -117,6 +117,20 @@ Add the following to your Claude Desktop configuration file:
 
 #### Option 2: Remote Deployment (Zeabur)
 
+##### Required Zeabur Services
+
+1. **Node.js Service** (Primary - Required)
+   - Main MCP server runtime
+   - Auto-detected from Dockerfile
+   - Node.js 18+ environment
+
+2. **Redis Service** (Optional - Recommended for caching/queues)
+   - Create a Redis service in Zeabur
+   - Link to your Node.js service
+   - Zeabur auto-injects connection URL
+
+##### Deployment Steps
+
 1. **Deploy to Zeabur:**
    - Fork this repository
    - Connect your GitHub account to Zeabur
@@ -124,17 +138,56 @@ Add the following to your Claude Desktop configuration file:
    - Zeabur will automatically detect the Dockerfile
 
 2. **Configure Environment Variables in Zeabur:**
-   ```
+
+   **Core (Required):**
+   ```bash
+   # MCP Authentication
    MCP_AUTH_TOKEN=your-secret-token
+   
+   # Airtable
    AIRTABLE_API_KEY=your-airtable-api-key
-   AIRTABLE_BASE_ID=your-default-base-id (optional)
-   AWS_REGION=us-east-1 (optional)
-   AWS_S3_BUCKET=your-bucket-name (optional)
-   AWS_ACCESS_KEY_ID=your-key (optional)
-   AWS_SECRET_ACCESS_KEY=your-secret (optional)
+   AIRTABLE_BASE_ID=your-default-base-id  # Optional
    ```
 
-3. **Configure Claude Desktop for Remote MCP:**
+   **Storage (Optional - for attachments):**
+   ```bash
+   # AWS S3
+   AWS_REGION=us-east-1
+   AWS_S3_BUCKET=your-bucket-name
+   AWS_ACCESS_KEY_ID=your-access-key
+   AWS_SECRET_ACCESS_KEY=your-secret-key
+   AWS_S3_PUBLIC_URL_PREFIX=https://your-cdn.com
+   
+   # OR Google Cloud Storage
+   GCS_BUCKET=your-gcs-bucket
+   GCS_PROJECT_ID=your-project-id
+   GCS_CLIENT_EMAIL=service-account@project.iam.gserviceaccount.com
+   GCS_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...
+   GCS_PUBLIC_URL_PREFIX=https://storage.googleapis.com/your-bucket
+   ```
+
+   **Redis (Optional - auto-configured if service added):**
+   ```bash
+   REDIS_URL=redis://default:password@redis:6379
+   REDIS_HOST=redis
+   REDIS_PORT=6379
+   REDIS_PASSWORD=your-password
+   QUEUE_CONCURRENCY=5
+   ```
+
+   **Access Control (Recommended for production):**
+   ```bash
+   ACCESS_CONTROL_MODE=allowlist
+   ALLOWED_BASES=appProductionData,appPublicData
+   ALLOWED_TABLES=Customers,Products,Orders
+   BLOCKED_TABLES=Passwords,PersonalInfo
+   ```
+
+3. **Configure Domain:**
+   - Add custom domain or use Zeabur's provided domain
+   - Ensure HTTPS is enabled (required for MCP SSE transport)
+
+4. **Configure Claude Desktop for Remote MCP:**
    ```json
    {
      "mcpServers": {
@@ -154,6 +207,7 @@ Add the following to your Claude Desktop configuration file:
 - Use HTTPS only
 - Keep your API keys secure in Zeabur's environment variables
 - Never commit secrets to your repository
+- Configure access control for production use
 
 ## Available Tools
 
