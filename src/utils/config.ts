@@ -31,6 +31,15 @@ const ConfigSchema = z.object({
   GCS_CLIENT_EMAIL: z.string().optional(),
   GCS_PRIVATE_KEY: z.string().optional(),
   GCS_PUBLIC_URL_PREFIX: z.string().optional(),
+  
+  // Access control configuration
+  ALLOWED_BASES: z.string().optional(), // Comma-separated list of base IDs
+  ALLOWED_TABLES: z.string().optional(), // Comma-separated list of table names or IDs
+  ALLOWED_VIEWS: z.string().optional(), // Comma-separated list of view names or IDs
+  BLOCKED_BASES: z.string().optional(), // Comma-separated list of blocked base IDs
+  BLOCKED_TABLES: z.string().optional(), // Comma-separated list of blocked table names
+  BLOCKED_VIEWS: z.string().optional(), // Comma-separated list of blocked view names
+  ACCESS_CONTROL_MODE: z.enum(['allowlist', 'blocklist', 'both']).default('allowlist'),
 }).refine(
   (config) => {
     // If S3 bucket is provided, AWS credentials must be provided

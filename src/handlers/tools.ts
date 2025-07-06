@@ -5,6 +5,14 @@ import { S3StorageClient } from '../s3/client.js';
 import { GCSStorageClient } from '../gcs/client.js';
 import { logger } from '../utils/logger.js';
 import { validateFilePath, sanitizeFilename } from '../utils/path-validation.js';
+import { 
+  enforceBaseAccess, 
+  enforceTableAccess, 
+  enforceViewAccess,
+  filterBases,
+  filterTables,
+  filterViews 
+} from '../utils/access-control.js';
 
 let client: AirtableClient | null = null;
 let queuedClient: QueuedAirtableClient | null = null;
@@ -441,15 +449,41 @@ type ToolHandler = (args: any) => Promise<any>;
 
 export const toolHandlers: Record<string, ToolHandler> = {
   list_bases: async () => {
-    return getClient().listBases();
+    const result = await getClient().listBases() as any;
+    // Filter bases based on access control
+    if (result.bases) {
+      result.bases = filterBases(result.bases);
+    }
+    return result;
   },
 
   list_tables: async (args: { baseId?: string }) => {
-    return getClient().listTables(args.baseId);
+    // Check base access if baseId provided
+    if (args.baseId) {
+      enforceBaseAccess(args.baseId);
+    }
+    const result = await getClient().listTables(args.baseId) as any;
+    // Filter tables based on access control
+    if (result.tables) {
+      result.tables = filterTables(result.tables);
+    }
+    return result;
   },
 
   list_views: async (args: { tableName: string; baseId?: string }) => {
-    return getClient().listViews(args.tableName, args.baseId);
+    // Check base access if baseId provided
+    if (args.baseId) {
+      enforceBaseAccess(args.baseId);
+    }
+    // Check table access
+    enforceTableAccess(args.tableName);
+    
+    const result = await getClient().listViews(args.tableName, args.baseId);
+    // Filter views based on access control
+    if (result.views) {
+      result.views = filterViews(result.views);
+    }
+    return result;
   },
 
   get_records: async (args: {
@@ -461,6 +495,15 @@ export const toolHandlers: Record<string, ToolHandler> = {
     sort?: Array<{ field: string; direction?: 'asc' | 'desc' }>;
     fields?: string[];
   }) => {
+    // Check access control
+    if (args.baseId) {
+      enforceBaseAccess(args.baseId);
+    }
+    enforceTableAccess(args.tableName);
+    if (args.view) {
+      enforceViewAccess(args.view);
+    }
+    
     // Log filterByFormula if present to help debug encoding issues
     if (args.filterByFormula) {
       logger.debug('FilterByFormula received', { 
@@ -486,6 +529,12 @@ export const toolHandlers: Record<string, ToolHandler> = {
     baseId?: string;
     typecast?: boolean;
   }) => {
+    // Check access control
+    if (args.baseId) {
+      enforceBaseAccess(args.baseId);
+    }
+    enforceTableAccess(args.tableName);
+    
     // For single records, use the standard client with rate limiting
     const { airtableRateLimiter } = await import('../utils/enhanced-rate-limiter.js');
     

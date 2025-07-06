@@ -98,6 +98,10 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.info('MCP Airtable server running on stdio');
+  
+  // Log access control configuration
+  const { getAccessControlSummary } = await import('./utils/access-control.js');
+  logger.info(getAccessControlSummary());
 }
 
 main().catch((error) => {

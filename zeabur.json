@@ -96,6 +96,35 @@
       "description": "Logging level (debug, info, warn, error)",
       "default": "info",
       "required": false
+    },
+    "ACCESS_CONTROL_MODE": {
+      "description": "Access control mode: allowlist, blocklist, or both",
+      "default": "allowlist",
+      "required": false
+    },
+    "ALLOWED_BASES": {
+      "description": "Comma-separated list of allowed base IDs",
+      "required": false
+    },
+    "ALLOWED_TABLES": {
+      "description": "Comma-separated list of allowed table names or IDs",
+      "required": false
+    },
+    "ALLOWED_VIEWS": {
+      "description": "Comma-separated list of allowed view names or IDs",
+      "required": false
+    },
+    "BLOCKED_BASES": {
+      "description": "Comma-separated list of blocked base IDs",
+      "required": false
+    },
+    "BLOCKED_TABLES": {
+      "description": "Comma-separated list of blocked table names",
+      "required": false
+    },
+    "BLOCKED_VIEWS": {
+      "description": "Comma-separated list of blocked view names",
+      "required": false
     }
   }
 }

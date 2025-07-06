@@ -11,6 +11,26 @@ An MCP (Model Context Protocol) server that provides tools for interacting with 
 - Update existing records
 - Delete records
 - Get base schema information
+- **Access Control**: Restrict access to specific bases, tables, and views
+
+## Access Control
+
+The server supports comprehensive access control to limit what the AI can access:
+
+```bash
+# Allowlist mode - only allow specific items
+ACCESS_CONTROL_MODE=allowlist
+ALLOWED_BASES=appProductionData,appPublicData
+ALLOWED_TABLES=Customers,Products,Orders
+ALLOWED_VIEWS=Public View,Customer Facing
+
+# Blocklist mode - block specific items
+ACCESS_CONTROL_MODE=blocklist
+BLOCKED_TABLES=Passwords,PersonalInfo,Salaries
+BLOCKED_BASES=appSensitiveHR
+```
+
+This prevents the AI from accessing sensitive data. See [Access Control Guide](docs/guides/access-control.md) for details.
 
 ## Installation
 
