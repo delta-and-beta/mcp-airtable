@@ -1,0 +1,174 @@
+{
+  "name": "MCP Airtable SSE Bridge",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "=GET",
+        "path": "mcp-bridge",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/event-stream"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-cache"
+              },
+              {
+                "name": "Connection",
+                "value": "keep-alive"
+              },
+              {
+                "name": "X-Accel-Buffering",
+                "value": "no"
+              }
+            ]
+          }
+        }
+      },
+      "id": "sse-webhook",
+      "name": "SSE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract authorization from query params or headers\nconst authHeader = $input.first().json.headers?.authorization || \n                  ($input.first().json.query?.token ? `Bearer ${$input.first().json.query.token}` : '');\n\n// Store for later use\n$input.first().json.authHeader = authHeader;\n\nreturn $input.all();"
+      },
+      "id": "extract-auth",
+      "name": "Extract Auth",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://caissa-mcp-airtable.zeabur.app/mcp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.authHeader }}"
+            },
+            {
+              "name": "Accept",
+              "value": "text/event-stream"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "fullResponse": true
+            }
+          },
+          "timeout": 0
+        }
+      },
+      "id": "sse-request",
+      "name": "SSE Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process SSE response\nconst response = $input.first().json;\nconst body = response.body || '';\nconst headers = response.headers || {};\n\n// Forward SSE data\nreturn [{\n  json: {\n    data: body,\n    headers: headers,\n    statusCode: response.statusCode || 200\n  }\n}];"
+      },
+      "id": "process-sse",
+      "name": "Process SSE",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "mode": "responseNode",
+        "responseCode": "={{ $json.statusCode }}",
+        "responseHeaders": {
+          "entries": [
+            {
+              "name": "Content-Type",
+              "value": "text/event-stream"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        "responseData": "={{ $json.data }}"
+      },
+      "id": "sse-response",
+      "name": "SSE Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "SSE Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Auth": {
+      "main": [
+        [
+          {
+            "node": "SSE Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSE Request": {
+      "main": [
+        [
+          {
+            "node": "Process SSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process SSE": {
+      "main": [
+        [
+          {
+            "node": "SSE Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "mcp-airtable-sse-bridge"
+  },
+  "tags": ["mcp", "airtable", "sse", "bridge"]
+}
