@@ -21,20 +21,39 @@ Claude Desktop configuration is typically located at:
 
 ### 2. Configure MCP Server Connection
 
-Edit the `claude_desktop_config.json` file and add your MCP server configuration:
+Claude Desktop currently uses stdio transport, so we need to use a local proxy to connect to the remote SSE server.
+
+#### Option 1: Using npx (Recommended)
+
+Edit the `claude_desktop_config.json` file:
 
 ```json
 {
   "mcpServers": {
     "mcp-airtable": {
-      "transport": {
-        "type": "sse",
-        "url": "https://your-app.zeabur.app/mcp",
-        "headers": {
-          "Authorization": "Bearer YOUR_MCP_AUTH_TOKEN"
-        }
-      },
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sse-client", "https://your-app.zeabur.app/mcp"],
       "env": {
+        "AUTHORIZATION": "Bearer YOUR_MCP_AUTH_TOKEN"
+      }
+    }
+  }
+}
+```
+
+#### Option 2: Using the local installation
+
+If you have the MCP server installed locally:
+
+```json
+{
+  "mcpServers": {
+    "mcp-airtable": {
+      "command": "node",
+      "args": ["/path/to/mcp-airtable/scripts/claude-desktop-proxy.js"],
+      "env": {
+        "MCP_SERVER_URL": "https://your-app.zeabur.app/mcp",
+        "MCP_AUTH_TOKEN": "YOUR_MCP_AUTH_TOKEN",
         "AIRTABLE_API_KEY": "your-airtable-api-key",
         "AIRTABLE_BASE_ID": "your-default-base-id"
       }
@@ -45,20 +64,18 @@ Edit the `claude_desktop_config.json` file and add your MCP server configuration
 
 ### 3. Configuration Options
 
-#### Required Environment Variables
+#### For Option 1 (npx with SSE client)
 
-- `AIRTABLE_API_KEY`: Your Airtable personal access token or API key
+- `command`: Always `"npx"`
+- `args`: `["-y", "@modelcontextprotocol/server-sse-client", "YOUR_ZEABUR_URL/mcp"]`
+- `env.AUTHORIZATION`: Full authorization header including "Bearer " prefix
 
-#### Optional Environment Variables
+#### For Option 2 (local proxy)
 
-- `AIRTABLE_BASE_ID`: Default base ID to use if not specified in tool calls
-- `MCP_AUTH_TOKEN`: Bearer token for authenticating with the MCP server (recommended for production)
-
-#### Transport Configuration
-
-- `type`: Must be `"sse"` for Server-Sent Events transport
-- `url`: Your Zeabur deployment URL with `/mcp` endpoint
-- `headers`: Include authorization header if MCP_AUTH_TOKEN is configured on server
+- `MCP_SERVER_URL`: Your Zeabur deployment URL with `/mcp` endpoint
+- `MCP_AUTH_TOKEN`: Just the token value (without "Bearer " prefix)
+- `AIRTABLE_API_KEY`: Your Airtable personal access token
+- `AIRTABLE_BASE_ID`: Optional default base ID
 
 ### 4. Security Considerations
 
@@ -80,16 +97,10 @@ Here's a complete example with multiple MCP servers:
 {
   "mcpServers": {
     "mcp-airtable": {
-      "transport": {
-        "type": "sse",
-        "url": "https://mcp-airtable-prod.zeabur.app/mcp",
-        "headers": {
-          "Authorization": "Bearer your-secret-token-here"
-        }
-      },
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sse-client", "https://mcp-airtable-prod.zeabur.app/mcp"],
       "env": {
-        "AIRTABLE_API_KEY": "patXXXXXXXXXXXXXX",
-        "AIRTABLE_BASE_ID": "appXXXXXXXXXXXXXX"
+        "AUTHORIZATION": "Bearer your-secret-token-here"
       }
     },
     "filesystem": {
