@@ -172,7 +172,13 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 
 - `list_tables` - List all tables in a base
 - `create_table` - Create a new table with specified fields
+- `update_table` - Update table properties (name or description)
 - `list_views` - List all views in a table
+
+### Field Operations
+
+- `create_field` - Add a new field to an existing table
+- `update_field` - Update field properties (name or description)
 
 ### Record Operations
 
@@ -278,6 +284,54 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
         "type": "multipleCollaborators"
       }
     ]
+  }
+}
+```
+
+### Update a table
+
+```json
+{
+  "tool": "update_table",
+  "arguments": {
+    "tableIdOrName": "Projects",
+    "name": "Active Projects",
+    "description": "Track all active project progress"
+  }
+}
+```
+
+### Create a field
+
+```json
+{
+  "tool": "create_field",
+  "arguments": {
+    "tableIdOrName": "Projects",
+    "name": "Priority",
+    "type": "singleSelect",
+    "description": "Project priority level",
+    "options": {
+      "choices": [
+        { "name": "Low", "color": "grayBright" },
+        { "name": "Medium", "color": "yellowBright" },
+        { "name": "High", "color": "redBright" }
+      ]
+    }
+  }
+}
+```
+
+### Update a field
+
+```json
+{
+  "tool": "update_field",
+  "arguments": {
+    "tableIdOrName": "Projects",
+    "fieldIdOrName": "Priority",
+    "name": "Priority Level",
+    "description": "Updated project priority level"
   }
 }
 ```

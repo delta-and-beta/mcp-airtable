@@ -152,6 +152,67 @@ const FieldTypeSchema = z.enum([
   'aiText'
 ]);
 
+export const UpdateTableSchema = ApiKeySchema.extend({
+  tableIdOrName: z.string().min(1),
+  name: TableNameSchema.optional(),
+  description: z.string().optional(),
+  baseId: BaseIdSchema.optional(),
+}).refine(
+  (data) => data.name || data.description,
+  { message: 'At least one of name or description must be provided' }
+);
+
+export const CreateFieldSchema = ApiKeySchema.extend({
+  tableIdOrName: z.string().min(1),
+  name: z.string().min(1).max(255),
+  type: FieldTypeSchema,
+  description: z.string().optional(),
+  options: z.object({
+    // Single/Multiple Select options
+    choices: z.array(z.object({
+      name: z.string(),
+      color: z.string().optional(),
+    })).optional(),
+    // Number/Currency options
+    precision: z.number().int().min(0).max(8).optional(),
+    // Currency options
+    symbol: z.string().optional(),
+    // Date options
+    dateFormat: z.object({
+      name: z.enum(['local', 'friendly', 'us', 'european', 'iso']),
+      format: z.string().optional(),
+    }).optional(),
+    timeFormat: z.object({
+      name: z.enum(['12hour', '24hour']),
+      format: z.string().optional(),
+    }).optional(),
+    timeZone: z.string().optional(),
+    // Linked record options
+    linkedTableId: z.string().optional(),
+    prefersSingleRecordLink: z.boolean().optional(),
+    inverseLinkFieldId: z.string().optional(),
+    // Checkbox options
+    icon: z.enum(['check', 'star', 'heart', 'thumbsUp', 'flag', 'dot']).optional(),
+    color: z.enum(['yellowBright', 'orangeBright', 'redBright', 'pinkBright', 'purpleBright', 'blueBright', 'cyanBright', 'tealBright', 'greenBright', 'grayBright']).optional(),
+    // Rating options
+    max: z.number().int().min(1).max(10).optional(),
+    // Duration options
+    durationFormat: z.enum(['h:mm', 'h:mm:ss', 'h:mm:ss.S', 'h:mm:ss.SS', 'h:mm:ss.SSS']).optional(),
+  }).optional(),
+  baseId: BaseIdSchema.optional(),
+});
+
+export const UpdateFieldSchema = ApiKeySchema.extend({
+  tableIdOrName: z.string().min(1),
+  fieldIdOrName: z.string().min(1),
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  baseId: BaseIdSchema.optional(),
+}).refine(
+  (data) => data.name || data.description,
+  { message: 'At least one of name or description must be provided' }
+);
+
 export const CreateTableSchema = ApiKeySchema.extend({
   name: TableNameSchema,
   description: z.string().optional(),
