@@ -1,6 +1,6 @@
 import { AirtableClient } from './client.js';
 import { queueManager } from '../utils/queue-manager.js';
-import { airtableRateLimiter } from '../utils/enhanced-rate-limiter.js';
+import { airtableRateLimiter } from '../utils/rate-limiter-redis.js';
 import { logger } from '../utils/logger.js';
 import type { FieldSet } from 'airtable';
 
