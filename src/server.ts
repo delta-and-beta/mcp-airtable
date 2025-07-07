@@ -13,6 +13,7 @@ import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
 import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 import { rateLimitMiddleware } from './utils/rate-limiter-redis.js';
+import { extractRequestContext } from './utils/request-context.js';
 
 // Load environment variables
 // Only load .env file in development
@@ -243,7 +244,16 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
         }
         
         try {
-          const result = await handler(args);
+          // Extract context from request
+          const context = extractRequestContext(req);
+          
+          // Merge context with args
+          const argsWithContext = {
+            ...args,
+            ...context,
+          };
+          
+          const result = await handler(argsWithContext);
           const sanitizedResult = prepareResponse(result);
           res.json({
             jsonrpc: '2.0',

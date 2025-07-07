@@ -16,7 +16,7 @@ export function validateConfig(): Config {
     console.log('🔍 Environment check:');
     console.log(`  - NODE_ENV: ${process.env.NODE_ENV || '(not set)'}`);
     console.log(`  - PORT: ${process.env.PORT || '(not set)'}`);
-    console.log(`  - AIRTABLE_API_KEY: ${process.env.AIRTABLE_API_KEY ? '***' + process.env.AIRTABLE_API_KEY.slice(-4) : '(not set)'}`);
+    console.log(`  - AIRTABLE_API_KEY: ${process.env.AIRTABLE_API_KEY ? '***' + process.env.AIRTABLE_API_KEY.slice(-4) : '(not set - can be provided per-request)'}`);
     console.log(`  - AIRTABLE_BASE_ID: ${process.env.AIRTABLE_BASE_ID || '(not set)'}`);
     console.log(`  - MCP_AUTH_TOKEN: ${process.env.MCP_AUTH_TOKEN ? '***' + process.env.MCP_AUTH_TOKEN.slice(-4) : '(not set)'}`);
     
@@ -27,12 +27,18 @@ export function validateConfig(): Config {
       console.warn('⚠️  WARNING: MCP_AUTH_TOKEN not set in production environment');
     }
     
+    // Info about API key in production
+    if (config.NODE_ENV === 'production' && !config.AIRTABLE_API_KEY) {
+      console.info('ℹ️  INFO: AIRTABLE_API_KEY not set - must be provided in request headers');
+    }
+    
     // Log configuration summary
     console.log('✅ Configuration validated successfully');
     if (config.NODE_ENV === 'development') {
       console.log('📋 Configuration loaded:');
       console.log(`  - Environment: ${config.NODE_ENV}`);
       console.log(`  - Port: ${config.PORT}`);
+      console.log(`  - Airtable API Key: ${config.AIRTABLE_API_KEY ? 'configured' : 'per-request'}`);
       console.log(`  - Airtable Base: ${config.AIRTABLE_BASE_ID || '(not set - will be required per request)'}`);
       console.log(`  - Authentication: ${config.MCP_AUTH_TOKEN ? 'enabled' : 'disabled'}`);
       console.log(`  - Storage: ${getStorageInfo(config)}`);

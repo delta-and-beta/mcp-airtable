@@ -14,30 +14,41 @@ import {
   filterViews 
 } from '../utils/access-control.js';
 
-let client: AirtableClient | null = null;
-let queuedClient: QueuedAirtableClient | null = null;
+// Client cache for reusing connections with the same API key
+const clientCache = new Map<string, AirtableClient>();
+const queuedClientCache = new Map<string, QueuedAirtableClient>();
 let s3Client: S3StorageClient | null = null;
 let gcsClient: GCSStorageClient | null = null;
 
-function getClient(): AirtableClient {
-  if (!client) {
-    client = new AirtableClient({
-      apiKey: process.env.AIRTABLE_API_KEY || '',
-      baseId: process.env.AIRTABLE_BASE_ID,
-    });
+function getClient(apiKey?: string, baseId?: string): AirtableClient {
+  const key = apiKey || process.env.AIRTABLE_API_KEY || '';
+  if (!key) {
+    throw new Error('Airtable API key is required');
   }
-  return client;
+  
+  if (!clientCache.has(key)) {
+    clientCache.set(key, new AirtableClient({
+      apiKey: key,
+      baseId: baseId || process.env.AIRTABLE_BASE_ID,
+    }));
+  }
+  return clientCache.get(key)!;
 }
 
-function getQueuedClient(): QueuedAirtableClient {
-  if (!queuedClient) {
-    queuedClient = new QueuedAirtableClient({
-      apiKey: process.env.AIRTABLE_API_KEY || '',
-      baseId: process.env.AIRTABLE_BASE_ID,
-      useQueue: !!process.env.REDIS_URL || !!process.env.REDIS_HOST,
-    });
+function getQueuedClient(apiKey?: string, baseId?: string): QueuedAirtableClient {
+  const key = apiKey || process.env.AIRTABLE_API_KEY || '';
+  if (!key) {
+    throw new Error('Airtable API key is required');
   }
-  return queuedClient;
+  
+  if (!queuedClientCache.has(key)) {
+    queuedClientCache.set(key, new QueuedAirtableClient({
+      apiKey: key,
+      baseId: baseId || process.env.AIRTABLE_BASE_ID,
+      useQueue: !!process.env.REDIS_URL || !!process.env.REDIS_HOST,
+    }));
+  }
+  return queuedClientCache.get(key)!;
 }
 
 function getS3Client(): S3StorageClient | null {
@@ -448,8 +459,8 @@ export const toolDefinitions: Tool[] = [
 type ToolHandler = (args: any) => Promise<any>;
 
 export const toolHandlers: Record<string, ToolHandler> = {
-  list_bases: async () => {
-    const result = await getClient().listBases() as any;
+  list_bases: async (args: { airtableApiKey?: string; airtableBaseId?: string }) => {
+    const result = await getClient(args.airtableApiKey, args.airtableBaseId).listBases() as any;
     // Filter bases based on access control
     if (result.bases) {
       result.bases = filterBases(result.bases);
@@ -457,12 +468,12 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return result;
   },
 
-  list_tables: async (args: { baseId?: string }) => {
+  list_tables: async (args: { baseId?: string; airtableApiKey?: string; airtableBaseId?: string }) => {
     // Check base access if baseId provided
     if (args.baseId) {
       enforceBaseAccess(args.baseId);
     }
-    const result = await getClient().listTables(args.baseId) as any;
+    const result = await getClient(args.airtableApiKey, args.airtableBaseId).listTables(args.baseId) as any;
     // Filter tables based on access control
     if (result.tables) {
       result.tables = filterTables(result.tables);
@@ -470,7 +481,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return result;
   },
 
-  list_views: async (args: { tableName: string; baseId?: string }) => {
+  list_views: async (args: { tableName: string; baseId?: string; airtableApiKey?: string; airtableBaseId?: string }) => {
     // Check base access if baseId provided
     if (args.baseId) {
       enforceBaseAccess(args.baseId);
@@ -478,7 +489,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     // Check table access
     enforceTableAccess(args.tableName);
     
-    const result = await getClient().listViews(args.tableName, args.baseId);
+    const result = await getClient(args.airtableApiKey, args.airtableBaseId).listViews(args.tableName, args.baseId);
     // Filter views based on access control
     if (result.views) {
       result.views = filterViews(result.views);
@@ -494,6 +505,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
     filterByFormula?: string;
     sort?: Array<{ field: string; direction?: 'asc' | 'desc' }>;
     fields?: string[];
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
     // Check access control
     if (args.baseId) {
@@ -513,7 +526,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       });
     }
     
-    return getClient().getRecords(args.tableName, {
+    return getClient(args.airtableApiKey, args.airtableBaseId).getRecords(args.tableName, {
       baseId: args.baseId,
       view: args.view,
       maxRecords: args.maxRecords,
@@ -528,6 +541,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
     fields: Record<string, any>;
     baseId?: string;
     typecast?: boolean;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
     // Check access control
     if (args.baseId) {
@@ -539,7 +554,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const { airtableRateLimiter } = await import('../utils/rate-limiter-redis.js');
     
     return airtableRateLimiter.executeWithRetry(
-      () => getClient().createRecord(args.tableName, args.fields, {
+      () => getClient(args.airtableApiKey, args.airtableBaseId).createRecord(args.tableName, args.fields, {
         baseId: args.baseId,
         typecast: args.typecast,
       }),
@@ -553,12 +568,14 @@ export const toolHandlers: Record<string, ToolHandler> = {
     fields: Record<string, any>;
     baseId?: string;
     typecast?: boolean;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
     // For single records, use the standard client with rate limiting
     const { airtableRateLimiter } = await import('../utils/rate-limiter-redis.js');
     
     return airtableRateLimiter.executeWithRetry(
-      () => getClient().updateRecord(args.tableName, args.recordId, args.fields, {
+      () => getClient(args.airtableApiKey, args.airtableBaseId).updateRecord(args.tableName, args.recordId, args.fields, {
         baseId: args.baseId,
         typecast: args.typecast,
       }),
@@ -570,14 +587,16 @@ export const toolHandlers: Record<string, ToolHandler> = {
     tableName: string;
     recordId: string;
     baseId?: string;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
-    return getClient().deleteRecord(args.tableName, args.recordId, {
+    return getClient(args.airtableApiKey, args.airtableBaseId).deleteRecord(args.tableName, args.recordId, {
       baseId: args.baseId,
     });
   },
 
-  get_schema: async (args: { baseId?: string }) => {
-    return getClient().getSchema(args.baseId);
+  get_schema: async (args: { baseId?: string; airtableApiKey?: string; airtableBaseId?: string }) => {
+    return getClient(args.airtableApiKey, args.airtableBaseId).getSchema(args.baseId);
   },
 
   upload_attachment: async (args: {
@@ -653,8 +672,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
     records: Array<{ fields: Record<string, any> }>;
     baseId?: string;
     typecast?: boolean;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
-    const client = getQueuedClient();
+    const client = getQueuedClient(args.airtableApiKey, args.airtableBaseId);
     
     // QueuedClient handles rate limiting and auto-batching internally
     return client.batchCreate(args.tableName, args.records, {
@@ -668,8 +689,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
     records: Array<{ id: string; fields: Record<string, any> }>;
     baseId?: string;
     typecast?: boolean;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
-    const client = getQueuedClient();
+    const client = getQueuedClient(args.airtableApiKey, args.airtableBaseId);
     
     // QueuedClient handles rate limiting and auto-batching internally
     return client.batchUpdate(args.tableName, args.records, {
@@ -682,8 +705,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
     tableName: string;
     recordIds: string[];
     baseId?: string;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
-    const client = getQueuedClient();
+    const client = getQueuedClient(args.airtableApiKey, args.airtableBaseId);
     
     // Use enhanced rate limiter
     const { airtableRateLimiter } = await import('../utils/rate-limiter-redis.js');
@@ -703,8 +728,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
     typecast?: boolean;
     upsertFields?: string[];
     detectUpsertFields?: boolean;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
   }) => {
-    const client = getClient();
+    const client = getClient(args.airtableApiKey, args.airtableBaseId);
     
     // If detectUpsertFields is true, use AI to detect the best fields
     let fieldsToMergeOn = args.upsertFields;
