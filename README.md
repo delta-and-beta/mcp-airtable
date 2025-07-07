@@ -23,6 +23,8 @@ npm install mcp-airtable
 
 ### Using Claude Desktop
 
+#### Local Installation
+
 Add the server to your Claude Desktop configuration:
 
 ```json
@@ -39,12 +41,35 @@ Add the server to your Claude Desktop configuration:
 }
 ```
 
+#### Remote Server (mcp-remote)
+
+For connecting to a remote MCP server, you can pass the API key via headers:
+
+```json
+{
+  "mcpServers": {
+    "airtable-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp/mcp-remote", 
+        "https://your-server.com/mcp",
+        "--header",
+        "X-Airtable-Api-Key: your_api_key_here"
+      ]
+    }
+  }
+}
+```
+
+See the [MCP Remote Setup Guide](docs/mcp-remote-setup.md) for detailed configuration options.
+
 ## Configuration
 
 The server is configured through environment variables. Create a `.env` file in your project root:
 
 ```bash
-# Required
+# Optional - Can be provided via request headers or tool arguments
 AIRTABLE_API_KEY=your_airtable_api_key
 
 # Required for production
@@ -80,7 +105,7 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=60
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `AIRTABLE_API_KEY` | Your Airtable API key | - | Yes |
+| `AIRTABLE_API_KEY` | Your Airtable API key (can also be passed via headers) | - | No* |
 | `MCP_AUTH_TOKEN` | Bearer token for API authentication | - | Yes (production) |
 | `AIRTABLE_BASE_ID` | Default base ID for operations | - | No |
 | `PORT` | HTTP server port | 3000 | No |
@@ -89,6 +114,11 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=60
 | `LOG_LEVEL` | Logging level (debug/info/warn/error) | info | No |
 | `RATE_LIMIT_ENABLED` | Enable rate limiting | true | No |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | Max requests per minute | 60 | No |
+
+\* The Airtable API key can be provided in three ways (in order of precedence):
+1. As a tool argument: `{ "airtableApiKey": "your_key" }`
+2. Via HTTP headers: `X-Airtable-Api-Key` or `Authorization: Bearer pat...`
+3. As an environment variable: `AIRTABLE_API_KEY`
 
 ## Usage
 

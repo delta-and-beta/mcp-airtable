@@ -38,7 +38,7 @@ Or using npx:
 
 ## Remote Connection (HTTP)
 
-To connect to a remote MCP server, use the MCP proxy:
+To connect to a remote MCP server, use mcp-remote with header-based authentication:
 
 ```json
 {
@@ -47,12 +47,32 @@ To connect to a remote MCP server, use the MCP proxy:
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-proxy",
-        "https://your-server.com/mcp"
-      ],
-      "env": {
-        "MCP_AUTH_TOKEN": "your_auth_token_here"
-      }
+        "@mcp/mcp-remote",
+        "https://your-server.com/mcp",
+        "--header",
+        "X-Airtable-Api-Key: your_airtable_api_key"
+      ]
+    }
+  }
+}
+```
+
+Or with both MCP authentication and Airtable API key:
+
+```json
+{
+  "mcpServers": {
+    "airtable-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp/mcp-remote",
+        "https://your-server.com/mcp",
+        "--header",
+        "Authorization: Bearer your_mcp_auth_token",
+        "--header",
+        "X-Airtable-Api-Key: your_airtable_api_key"
+      ]
     }
   }
 }
@@ -64,29 +84,30 @@ To connect to a remote MCP server, use the MCP proxy:
 Replace `https://your-server.com/mcp` with your actual server endpoint.
 
 #### Authentication
-The `MCP_AUTH_TOKEN` in the env section should match the token configured on your server. This is passed as a Bearer token in the Authorization header.
+You can pass authentication tokens via headers:
+- `Authorization: Bearer <token>` - For MCP server authentication
+- `X-Airtable-Api-Key: <key>` - For Airtable API authentication
+- `X-Airtable-Base-Id: <id>` - Optional default base ID
 
-#### Custom Headers
-If you need additional headers, you can use environment variables:
+#### Header Options
+The server supports multiple ways to pass the Airtable API key:
 
-```json
-{
-  "mcpServers": {
-    "airtable-remote": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-proxy",
-        "https://your-server.com/mcp"
-      ],
-      "env": {
-        "MCP_AUTH_TOKEN": "your_auth_token_here",
-        "PROXY_HEADERS": "{\"X-Custom-Header\": \"value\"}"
-      }
-    }
-  }
-}
-```
+1. **X-Airtable-Api-Key header**:
+   ```json
+   "--header", "X-Airtable-Api-Key: patXXXXXXXXXXXXXX"
+   ```
+
+2. **Authorization header with PAT**:
+   ```json
+   "--header", "Authorization: Bearer patXXXXXXXXXXXXXX"
+   ```
+
+3. **Multiple headers**:
+   ```json
+   "--header", "Authorization: Bearer mcp_auth_token",
+   "--header", "X-Airtable-Api-Key: your_airtable_key",
+   "--header", "X-Airtable-Base-Id: appXXXXXXXXXXXXXX"
+   ```
 
 ## Environment Variables
 
@@ -140,12 +161,11 @@ You can configure additional options through environment variables:
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-proxy",
-        "http://localhost:3000/mcp"
-      ],
-      "env": {
-        "LOG_LEVEL": "debug"
-      }
+        "@mcp/mcp-remote",
+        "http://localhost:3000/mcp",
+        "--header",
+        "X-Airtable-Api-Key: your_dev_api_key"
+      ]
     }
   }
 }
@@ -159,14 +179,45 @@ You can configure additional options through environment variables:
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-proxy",
-        "https://api.company.com/mcp"
-      ],
-      "env": {
-        "MCP_AUTH_TOKEN": "prod_token_here",
-        "ALLOWED_BASES": "appProd1,appProd2",
-        "ALLOWED_TABLES": "Customers,Orders"
-      }
+        "@mcp/mcp-remote",
+        "https://api.company.com/mcp",
+        "--header",
+        "Authorization: Bearer prod_mcp_token",
+        "--header",
+        "X-Airtable-Api-Key: prod_airtable_key"
+      ]
+    }
+  }
+}
+```
+
+### Multiple Base Access
+```json
+{
+  "mcpServers": {
+    "airtable-personal": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp/mcp-remote",
+        "https://mcp.example.com/mcp",
+        "--header",
+        "X-Airtable-Api-Key: personal_api_key",
+        "--header",
+        "X-Airtable-Base-Id: appPersonalBase"
+      ]
+    },
+    "airtable-work": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp/mcp-remote",
+        "https://mcp.example.com/mcp",
+        "--header",
+        "X-Airtable-Api-Key: work_api_key",
+        "--header",
+        "X-Airtable-Base-Id: appWorkBase"
+      ]
     }
   }
 }
