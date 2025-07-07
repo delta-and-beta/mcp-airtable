@@ -16,6 +16,8 @@ import {
   BatchUpsertSchema,
   CreateTableSchema,
   UpdateTableSchema,
+  CreateFieldSchema,
+  UpdateFieldSchema,
 } from '../utils/validation.js';
 import type { FieldSet } from 'airtable';
 
@@ -119,6 +121,45 @@ export const toolHandlers = {
     return withErrorHandling(async () => {
       return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).updateTable(
         validated.tableIdOrName,
+        {
+          name: validated.name,
+          description: validated.description,
+        },
+        {
+          baseId: validated.baseId,
+        }
+      );
+    });
+  },
+
+  create_field: async (args: unknown) => {
+    const validated = validateInput(CreateFieldSchema, args);
+    await airtableRateLimiter.acquire('global');
+    
+    return withErrorHandling(async () => {
+      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).createField(
+        validated.tableIdOrName,
+        {
+          name: validated.name,
+          type: validated.type,
+          description: validated.description,
+          options: validated.options,
+        },
+        {
+          baseId: validated.baseId,
+        }
+      );
+    });
+  },
+
+  update_field: async (args: unknown) => {
+    const validated = validateInput(UpdateFieldSchema, args);
+    await airtableRateLimiter.acquire('global');
+    
+    return withErrorHandling(async () => {
+      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).updateField(
+        validated.tableIdOrName,
+        validated.fieldIdOrName,
         {
           name: validated.name,
           description: validated.description,
