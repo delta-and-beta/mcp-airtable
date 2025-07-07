@@ -112,18 +112,19 @@ app.get('/mcp', authenticate, async (req, res) => {
   const connectionId = crypto.randomBytes(16).toString('hex');
   logger.info('New MCP SSE connection', { connectionId, ip: req.ip });
   
-  // Set headers to disable buffering for SSE
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  
-  // Send initial comment to establish connection
-  res.write(':ok\n\n');
-  
   try {
+    // Create transport with custom options
     const transport = new SSEServerTransport('/mcp', res);
+    
+    // Override the start method to add our custom headers
+    const originalStart = transport.start.bind(transport);
+    transport.start = async () => {
+      // Add custom headers before SSE transport sets its headers
+      res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+      await originalStart();
+      // Send initial comment after headers are set
+      res.write(':ok\n\n');
+    };
     
     const server = new Server(
       {
@@ -388,18 +389,19 @@ app.get('/mcp/n8n/:token', async (req, res) => {
   const connectionId = crypto.randomBytes(16).toString('hex');
   logger.info('New n8n MCP SSE connection', { connectionId, ip: req.ip });
   
-  // Set headers to disable buffering for SSE
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  
-  // Send initial comment to establish connection
-  res.write(':ok\n\n');
-  
   try {
+    // Create transport with custom options
     const transport = new SSEServerTransport('/mcp/n8n/' + token, res);
+    
+    // Override the start method to add our custom headers
+    const originalStart = transport.start.bind(transport);
+    transport.start = async () => {
+      // Add custom headers before SSE transport sets its headers
+      res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+      await originalStart();
+      // Send initial comment after headers are set
+      res.write(':ok\n\n');
+    };
     
     const server = new Server(
       {
