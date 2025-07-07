@@ -247,6 +247,12 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
           // Extract context from request headers
           const context = extractRequestContext(req);
           
+          logger.debug('Extracted context from headers', { 
+            hasApiKey: !!context.airtableApiKey,
+            hasBaseId: !!context.airtableBaseId,
+            headers: Object.keys(req.headers)
+          });
+          
           // Merge context with args (args take precedence)
           const argsWithContext = {
             ...context,
