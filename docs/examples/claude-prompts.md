@@ -113,6 +113,64 @@ Upload the file '/path/to/document.pdf' and create a new record in Documents tab
 - Attachment: [the uploaded file]"
 ```
 
+## Creating Tables
+
+### Simple Table Creation
+
+```
+"Using API key patXXXXXXXXXXXXXX and base appYYYYYYYYYYYYYY:
+
+Create a new table called 'Projects' with these fields:
+- Name (text)
+- Description (multiline text)
+- Status (dropdown with options: Planning, Active, Completed)
+- Budget (currency)
+- Start Date (date)
+- End Date (date)
+- Team Lead (single collaborator)"
+```
+
+### Complex Table with Linked Records
+
+```
+"With credentials:
+- API Key: patXXXXXXXXXXXXXX
+- Base: appYYYYYYYYYYYYYY
+
+Create a 'Tasks' table that links to the existing 'Projects' table:
+1. Task Name (single line text)
+2. Description (rich text)
+3. Project (linked to Projects table, single link)
+4. Assigned To (multiple collaborators)
+5. Priority (single select: Low, Medium, High, Urgent)
+6. Due Date (date)
+7. Completed (checkbox)
+8. Time Spent (duration in hours)
+9. Attachments (multiple attachments)
+
+Make sure the Project field properly links to the Projects table."
+```
+
+### Table with Computed Fields
+
+```
+"API Key: patXXXXXXXXXXXXXX
+Base: appYYYYYYYYYYYYYY
+
+Create an 'Invoices' table with:
+- Invoice Number (auto number)
+- Client Name (single line text)
+- Items (multiline text)
+- Subtotal (currency)
+- Tax Rate (percent)
+- Total (formula: calculate from Subtotal and Tax Rate)
+- Status (single select: Draft, Sent, Paid, Overdue)
+- Issue Date (date)
+- Due Date (date)
+- Created Time (created time field)
+- Last Modified (last modified time field)"
+```
+
 ## Schema Operations (Enterprise)
 
 ```

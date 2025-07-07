@@ -14,6 +14,7 @@ import {
   GetSchemaSchema,
   UploadAttachmentSchema,
   BatchUpsertSchema,
+  CreateTableSchema,
 } from '../utils/validation.js';
 import type { FieldSet } from 'airtable';
 
@@ -91,6 +92,22 @@ export const toolHandlers = {
     
     return withErrorHandling(async () => {
       return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).listTables(validated.baseId);
+    });
+  },
+
+  create_table: async (args: unknown) => {
+    const validated = validateInput(CreateTableSchema, args);
+    await airtableRateLimiter.acquire('global');
+    
+    return withErrorHandling(async () => {
+      return await getAirtableClient().createTable(
+        validated.name,
+        validated.fields,
+        {
+          baseId: validated.baseId,
+          description: validated.description,
+        }
+      );
     });
   },
 
