@@ -1,39 +1,41 @@
 # MCP Airtable Documentation
 
-Welcome to the comprehensive documentation for the MCP (Model Context Protocol) Airtable server. This documentation covers everything you need to know to deploy, configure, and use the MCP Airtable integration in production.
+Welcome to the comprehensive documentation for the MCP (Model Context Protocol) Airtable server. This documentation covers everything you need to know to deploy, configure, and use the MCP Airtable integration.
 
 ## 📚 Documentation Structure
 
-### [Getting Started](./guides/getting-started.md)
-Quick start guide to get you up and running with MCP Airtable.
+### Getting Started
+- [Installation & Setup](../README.md#installation)
+- [Claude Desktop Configuration](../deploy/claude-desktop/README.md)
+- [API Key Authentication](../README.md#api-key-authentication)
 
-### [API Reference](./api/README.md)
-Complete reference for all available tools and their parameters.
+### Usage Guides
+- [Claude Prompts Examples](./examples/claude-prompts.md) - **NEW!** How to use per-request API keys
+- [Access Control Guide](./guides/access-control.md)
+- [MCP Auth Token Setup](./guides/mcp-auth-token-setup.md)
 
-### [Architecture](./architecture/README.md)
-Deep dive into the system architecture, design decisions, and data flow.
+### Deployment
+- [Deployment Overview](../deploy/README.md)
+- [Docker Deployment](../deploy/docker/README.md) 
+- [Railway Deployment](../deploy/railway/README.md)
 
-### [Deployment Guide](./guides/deployment.md)
-Step-by-step instructions for deploying to various platforms.
+### API Reference
+- [Available Tools](../README.md#available-tools)
+- [Configuration Options](../README.md#configuration-options)
 
-### [Security Guide](./guides/security.md)
-Best practices for securing your MCP Airtable deployment.
+### Examples
+- [Claude Prompts](./examples/claude-prompts.md) - Example prompts for Claude Desktop
+- [API Examples](../README.md#api-examples)
 
-### [Configuration](./guides/configuration.md)
-Detailed configuration options and environment variables.
+## 🚀 What's New
 
-### [Troubleshooting](./guides/troubleshooting.md)
-Common issues and their solutions.
+### Per-Request API Keys
+The server now supports providing Airtable API keys with each request, enabling:
+- Multi-tenant scenarios
+- Dynamic credential management  
+- Enhanced security (no keys in config files)
 
-### [Examples](./examples/README.md)
-Real-world examples and use cases.
-
-## 🚀 Quick Links
-
-- [Local Development Setup](./guides/getting-started.md#local-development)
-- [Zeabur Deployment](./guides/deployment.md#zeabur)
-- [Tool Reference](./api/tools.md)
-- [Security Best Practices](./guides/security.md#best-practices)
+[Learn more →](./examples/claude-prompts.md)
 
 ## 🔧 System Requirements
 
@@ -48,18 +50,19 @@ Real-world examples and use cases.
 ### Core Features
 - ✅ Full CRUD operations on Airtable records
 - ✅ Base and table discovery
-- ✅ Schema introspection
+- ✅ Schema introspection (Enterprise plan)
 - ✅ Advanced filtering and sorting
-- ✅ Attachment upload via S3
-- ✅ Rate limiting (respects Airtable limits)
-- ✅ Input validation
+- ✅ Attachment upload via S3/GCS
+- ✅ Rate limiting with Redis support
+- ✅ Batch operations for efficiency
 - ✅ Comprehensive error handling
 
 ### Security Features
 - ✅ Bearer token authentication
+- ✅ Per-request API key support **NEW!**
 - ✅ Environment variable validation
-- ✅ Input sanitization
-- ✅ Secure error messages
+- ✅ Access control lists
+- ✅ Production security headers
 - ✅ Request logging
 
 ### Production Features
