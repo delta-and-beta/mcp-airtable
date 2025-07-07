@@ -57,5 +57,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the production SSE server
-CMD ["node", "dist/server-sse-production.js"]
+# Start the HTTP server for remote deployments
+CMD ["node", "dist/server.js"]

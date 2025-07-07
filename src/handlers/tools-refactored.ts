@@ -1,6 +1,6 @@
 import { AirtableClient } from '../airtable/client.js';
 import { S3StorageClient } from '../s3/client.js';
-import { config } from '../utils/config.js';
+import { config } from '../config/index.js';
 import { airtableRateLimiter } from '../utils/rate-limiter.js';
 import { AirtableError } from '../utils/errors.js';
 import {

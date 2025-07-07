@@ -6,10 +6,10 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { config as loadEnv } from 'dotenv';
-import { validateConfig } from './utils/config.js';
+import { validateConfig } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { formatErrorResponse } from './utils/errors.js';
-import { toolHandlers, toolDefinitions } from './handlers/tools.js';
+import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 
 // Load environment variables

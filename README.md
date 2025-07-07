@@ -1,420 +1,323 @@
 # MCP Airtable Server
 
-An MCP (Model Context Protocol) server that provides tools for interacting with Airtable databases. This server allows AI assistants to perform CRUD operations on Airtable bases and tables.
+A Model Context Protocol (MCP) server that provides seamless integration with Airtable databases. This server enables AI assistants like Claude to interact with Airtable bases, tables, and records through a standardized interface.
 
 ## Features
 
-- List available Airtable bases
-- List tables within a base
-- Get records with filtering, sorting, and field selection
-- Create new records
-- Update existing records
-- Delete records
-- Get base schema information
-- **Access Control**: Restrict access to specific bases, tables, and views
-
-## Access Control
-
-The server supports comprehensive access control to limit what the AI can access:
-
-```bash
-# Allowlist mode - only allow specific items
-ACCESS_CONTROL_MODE=allowlist
-ALLOWED_BASES=appProductionData,appPublicData
-ALLOWED_TABLES=Customers,Products,Orders
-ALLOWED_VIEWS=Public View,Customer Facing
-
-# Blocklist mode - block specific items
-ACCESS_CONTROL_MODE=blocklist
-BLOCKED_TABLES=Passwords,PersonalInfo,Salaries
-BLOCKED_BASES=appSensitiveHR
-```
-
-**⚠️ Default Behavior**: If no access control variables are configured, the AI has access to ALL bases, tables, and views. Always configure access control for production deployments.
-
-This prevents the AI from accessing sensitive data. See [Access Control Guide](docs/guides/access-control.md) for details.
+- 🔧 **Full CRUD Operations**: Create, read, update, and delete records
+- 📊 **Schema Inspection**: Explore base and table structures
+- 🔍 **Advanced Filtering**: Use Airtable formulas for complex queries
+- 📎 **Attachment Support**: Upload files to S3 or Google Cloud Storage
+- 🔐 **Secure Authentication**: Token-based API authentication
+- ⚡ **Rate Limiting**: Configurable request throttling
+- 🚀 **Batch Operations**: Efficient bulk record operations
+- 🛡️ **Access Control**: Fine-grained permissions for bases and tables
 
 ## Installation
 
-1. Clone this repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Using npm
 
-3. Build the TypeScript code:
-   ```bash
-   npm run build
-   ```
-
-## Configuration
-
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Add your Airtable API key to `.env`:
-   ```
-   AIRTABLE_API_KEY=your_api_key_here
-   ```
-
-3. (Optional) Add a default base ID:
-   ```
-   AIRTABLE_BASE_ID=appXXXXXXXXXXXXXX
-   ```
-
-### Getting your Airtable API Key
-
-1. Go to [Airtable account settings](https://airtable.com/account)
-2. Navigate to the "API" section
-3. Generate a personal access token with the following scopes:
-   - `data.records:read`
-   - `data.records:write`
-   - `schema.bases:read`
-
-## Server Modes
-
-This MCP server supports two transport modes:
-
-1. **stdio mode** (default) - For local Claude Desktop integration
-2. **SSE mode** - For remote deployments (HTTP with Server-Sent Events)
-
-### Running the Server
-
-#### stdio Mode (Local)
-For development with hot reload:
 ```bash
-npm run dev
+npm install mcp-airtable
 ```
 
-For production:
-```bash
-npm start
-```
+### Using Claude Desktop
 
-#### SSE Mode (Remote/HTTP)
-For development with hot reload:
-```bash
-npm run dev:sse
-```
-
-For production:
-```bash
-npm run start:sse
-```
-
-The SSE server runs on HTTP (default port 3000) and provides:
-- `/health` - Health check endpoint
-- `/mcp` - MCP SSE endpoint (requires authentication if configured)
-
-### Using with Claude Desktop
-
-#### Option 1: Local Installation (Recommended)
-
-Add the following to your Claude Desktop configuration file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+Add the server to your Claude Desktop configuration:
 
 ```json
 {
   "mcpServers": {
     "airtable": {
-      "command": "node",
-      "args": ["/path/to/mcp-airtable/dist/index.js"],
+      "command": "npx",
+      "args": ["mcp-airtable"],
       "env": {
-        "AIRTABLE_API_KEY": "your_api_key_here",
-        "AIRTABLE_BASE_ID": "optional_default_base_id",
-        "AWS_REGION": "us-east-1",
-        "AWS_S3_BUCKET": "your-bucket-name",
-        "AWS_ACCESS_KEY_ID": "your-access-key",
-        "AWS_SECRET_ACCESS_KEY": "your-secret-key"
+        "AIRTABLE_API_KEY": "your_api_key_here"
       }
     }
   }
 }
 ```
 
-#### Option 2: Remote Deployment (Zeabur/SSE)
+## Configuration
 
-**Note:** Remote deployments use SSE (Server-Sent Events) mode, not stdio mode.
+The server is configured through environment variables. Create a `.env` file in your project root:
 
-##### Required Zeabur Services
+```bash
+# Required
+AIRTABLE_API_KEY=your_airtable_api_key
 
-1. **Node.js Service** (Primary - Required)
-   - Main MCP server runtime
-   - Auto-detected from Dockerfile
-   - Node.js 18+ environment
+# Optional
+AIRTABLE_BASE_ID=default_base_id
+MCP_AUTH_TOKEN=your_auth_token
+PORT=3000
+NODE_ENV=production
 
-2. **Redis Service** (Optional - Recommended for caching/queues)
-   - Create a Redis service in Zeabur
-   - Link to your Node.js service
-   - Zeabur auto-injects connection URL
+# Storage Configuration (Optional)
+AWS_S3_BUCKET=your-bucket-name
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=us-east-1
 
-##### Deployment Steps
+# Or use Google Cloud Storage
+GCS_BUCKET=your-bucket-name
+GCS_PROJECT_ID=your-project-id
+GCS_KEY_FILE=/path/to/keyfile.json
 
-1. **Deploy to Zeabur:**
-   - Fork this repository
-   - Connect your GitHub account to Zeabur
-   - Create a new service and select this repository
-   - Zeabur will automatically detect the Dockerfile
+# Access Control (Optional)
+ALLOWED_BASES=base1,base2
+ALLOWED_TABLES=table1,table2
+ACCESS_CONTROL_MODE=allowlist
 
-2. **Configure Environment Variables in Zeabur:**
+# Rate Limiting (Optional)
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS_PER_MINUTE=60
+```
 
-   **Core (Required):**
-   ```bash
-   # MCP Authentication
-   MCP_AUTH_TOKEN=your-secret-token
-   
-   # Airtable
-   AIRTABLE_API_KEY=your-airtable-api-key
-   AIRTABLE_BASE_ID=your-default-base-id  # Optional
-   
-   # Note: PORT is automatically set by Zeabur (usually 8080)
-   # The server will use process.env.PORT || 3000
-   ```
+### Configuration Options
 
-   **Storage (Optional - for attachments):**
-   ```bash
-   # AWS S3
-   AWS_REGION=us-east-1
-   AWS_S3_BUCKET=your-bucket-name
-   AWS_ACCESS_KEY_ID=your-access-key
-   AWS_SECRET_ACCESS_KEY=your-secret-key
-   AWS_S3_PUBLIC_URL_PREFIX=https://your-cdn.com
-   
-   # OR Google Cloud Storage
-   GCS_BUCKET=your-gcs-bucket
-   GCS_PROJECT_ID=your-project-id
-   GCS_CLIENT_EMAIL=service-account@project.iam.gserviceaccount.com
-   GCS_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...
-   GCS_PUBLIC_URL_PREFIX=https://storage.googleapis.com/your-bucket
-   ```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AIRTABLE_API_KEY` | Your Airtable API key (required) | - |
+| `AIRTABLE_BASE_ID` | Default base ID for operations | - |
+| `PORT` | HTTP server port | 3000 |
+| `NODE_ENV` | Environment (development/production/test) | production |
+| `MCP_AUTH_TOKEN` | Bearer token for API authentication | - |
+| `CORS_ORIGIN` | CORS allowed origins | * |
+| `LOG_LEVEL` | Logging level (debug/info/warn/error) | info |
+| `RATE_LIMIT_ENABLED` | Enable rate limiting | true |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | Max requests per minute | 60 |
 
-   **Redis (Optional - auto-configured if service added):**
-   ```bash
-   REDIS_URL=redis://default:password@redis:6379
-   REDIS_HOST=redis
-   REDIS_PORT=6379
-   REDIS_PASSWORD=your-password
-   QUEUE_CONCURRENCY=5
-   ```
+## Usage
 
-   **Access Control (Recommended for production):**
-   ```bash
-   ACCESS_CONTROL_MODE=allowlist
-   ALLOWED_BASES=appProductionData,appPublicData
-   ALLOWED_TABLES=Customers,Products,Orders
-   BLOCKED_TABLES=Passwords,PersonalInfo
-   ```
+### Running Locally (STDIO Mode)
 
-3. **Configure Domain:**
-   - Add custom domain or use Zeabur's provided domain
-   - Ensure HTTPS is enabled (required for MCP SSE transport)
+For use with Claude Desktop or other local MCP clients:
 
-4. **Configure Claude Desktop for Remote MCP:**
-   ```json
-   {
-     "mcpServers": {
-       "airtable-remote": {
-         "transport": "sse",
-         "url": "https://your-app.zeabur.app/mcp",
-         "headers": {
-           "Authorization": "Bearer your-secret-token"
-         }
-       }
-     }
-   }
-   ```
+```bash
+npm start
+```
 
-**Security Note:** When using remote deployment, always:
-- Set a strong `MCP_AUTH_TOKEN`
-- Use HTTPS only
-- Keep your API keys secure in Zeabur's environment variables
-- Never commit secrets to your repository
-- Configure access control for production use
+### Running as HTTP Server
+
+For remote deployments or integration with other services:
+
+```bash
+npm run start:server
+```
+
+The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 
 ## Available Tools
 
-### `list_bases`
-List all available Airtable bases.
+### Base Operations
 
-### `list_tables`
-List all tables in a specific base.
+- `list_bases` - List all available Airtable bases
+- `get_schema` - Get the complete schema of a base
 
-**Parameters:**
-- `baseId` (optional): The base ID. Uses default if not specified.
+### Table Operations
 
-### `get_records`
-Retrieve records from a table with optional filtering and sorting.
+- `list_tables` - List all tables in a base
+- `list_views` - List all views in a table
 
-**Parameters:**
-- `tableName` (required): The name of the table
-- `baseId` (optional): The base ID
-- `view` (optional): View name or ID
-- `maxRecords` (optional): Maximum number of records to return
-- `filterByFormula` (optional): Airtable formula for filtering
-- `sort` (optional): Array of sort configurations
-- `fields` (optional): Array of field names to return
+### Record Operations
 
-### `create_record`
-Create a new record in a table.
+- `get_records` - Retrieve records with filtering and sorting
+- `get_record` - Get a single record by ID
+- `create_record` - Create a new record
+- `update_record` - Update an existing record
+- `delete_record` - Delete a record
 
-**Parameters:**
-- `tableName` (required): The name of the table
-- `fields` (required): Object containing field values
-- `baseId` (optional): The base ID
+### Batch Operations
 
-### `update_record`
-Update an existing record.
+- `batch_upsert` - Create or update multiple records
+- `batch_delete` - Delete multiple records
 
-**Parameters:**
-- `tableName` (required): The name of the table
-- `recordId` (required): The ID of the record to update
-- `fields` (required): Object containing fields to update
-- `baseId` (optional): The base ID
+### File Operations
 
-### `delete_record`
-Delete a record from a table.
-
-**Parameters:**
-- `tableName` (required): The name of the table
-- `recordId` (required): The ID of the record to delete
-- `baseId` (optional): The base ID
-
-### `get_schema`
-Get the schema information for a base.
-
-**Parameters:**
-- `baseId` (optional): The base ID
-
-### `upload_attachment`
-Upload a file to S3 and get a URL formatted for Airtable attachment fields. Requires AWS S3 configuration.
-
-**Parameters:**
-- `filePath` (optional): Local file path to upload
-- `base64Data` (optional): Base64 encoded file data
-- `filename` (required with base64Data): Filename for the attachment
-- `contentType` (optional): MIME type of the file
-
-**Returns:**
-- `url`: Public URL of the uploaded file
-- `filename`: Name of the file
-- `size`: File size in bytes
-- `type`: MIME type
-
-**Example usage with create_record:**
-```javascript
-// First upload the file
-const attachment = await upload_attachment({ filePath: '/path/to/image.jpg' });
-
-// Then create/update record with attachment field
-await create_record({
-  tableName: 'Products',
-  fields: {
-    'Name': 'Product Name',
-    'Images': [{ url: attachment.url, filename: attachment.filename }]
-  }
-});
-```
-
-## Development
-
-### Running Tests
-```bash
-npm test
-```
-
-### Type Checking
-```bash
-npm run type-check
-```
-
-### Linting
-```bash
-npm run lint
-```
+- `upload_attachment` - Upload files for attachment fields
 
 ## Examples
 
-### Getting Records with Filtering
-```javascript
+### List all bases
+
+```json
+{
+  "tool": "list_bases"
+}
+```
+
+### Get records with filtering
+
+```json
 {
   "tool": "get_records",
   "arguments": {
-    "tableName": "Contacts",
-    "filterByFormula": "AND({Status} = 'Active', {Age} > 25)",
-    "sort": [{ "field": "Name", "direction": "asc" }],
-    "maxRecords": 50
+    "tableName": "Tasks",
+    "filterByFormula": "AND({Status} = 'In Progress', {Priority} = 'High')",
+    "maxRecords": 10,
+    "sort": [
+      { "field": "DueDate", "direction": "asc" }
+    ]
   }
 }
 ```
 
-### Creating a Record
-```javascript
+### Create a record
+
+```json
 {
   "tool": "create_record",
   "arguments": {
-    "tableName": "Contacts",
+    "tableName": "Tasks",
     "fields": {
-      "Name": "John Doe",
-      "Email": "john@example.com",
-      "Status": "Active"
+      "Name": "New Task",
+      "Status": "Not Started",
+      "Priority": "Medium"
     }
   }
 }
 ```
 
-## Roadmap / TODO
+### Upload an attachment
 
-### High Priority (Quick Wins)
-- [ ] **Performance & Caching Layer** - Redis caching for schemas, records, and query results with TTL and invalidation
-- [ ] **Health Check Endpoint** - `/health` endpoint with Airtable connectivity check for production monitoring
-- [ ] **Natural Language Query Support** - Convert natural language to Airtable formulas (e.g., "customers from California who ordered last month")
+```json
+{
+  "tool": "upload_attachment",
+  "arguments": {
+    "filePath": "/path/to/file.pdf",
+    "storageProvider": "s3"
+  }
+}
+```
 
-### Medium Priority (High Value)
-- [ ] **Field-Level Access Control** - Extend access control to specific fields with masking options
-  ```bash
-  ALLOWED_FIELDS=Customers:Name,Email;Orders:*
-  BLOCKED_FIELDS=*:Password,*:SSN
-  FIELD_MASKING=Email:partial,Phone:full
-  ```
-- [ ] **Schema Migration Tools** - Version control and migration tools for Airtable schemas
-  - `compare_schemas` - Diff between environments
-  - `migrate_schema` - Apply schema changes safely
-  - `backup_schema` - Version control for structures
-- [ ] **Bulk Import/Export** - Enhanced data migration capabilities
-  - Smart CSV import with AI field mapping
-  - Multi-format export (CSV, JSON, Excel)
-  - Full base backup with attachments
+## Access Control
 
-### Future Enhancements
-- [ ] **Real-time Change Notifications** - Webhook-based table watching for live updates
-- [ ] **Transaction Support** - Atomic operations with rollback capability
-- [ ] **Smart Data Operations**
-  - Duplicate detection using AI
-  - Data quality checks
-  - Relationship suggestions
-  - Auto field mapping
-- [ ] **Operational Metrics** - Built-in observability with OpenTelemetry
-  - Rate limit tracking
-  - Operation latency metrics
-  - Smart backoff strategies
-- [ ] **Cost Optimization** - API usage tracking and query optimization suggestions
-- [ ] **Enhanced Security**
-  - Request signing with HMAC
-  - Automatic PII detection
-  - Audit logging with compliance exports
-  - Field-level encryption
-- [ ] **Developer Experience**
-  - CLI for setup and management
-  - TypeScript type generation from schemas
-  - Interactive configuration wizard
+The server supports comprehensive access control to limit what bases, tables, and views can be accessed:
 
-### Contributing
-Interested in contributing? Check out our [Contributing Guide](CONTRIBUTING.md) and pick an item from the roadmap!
+### Allowlist Mode
+Only allow access to specific items:
+
+```bash
+ACCESS_CONTROL_MODE=allowlist
+ALLOWED_BASES=appProductionData,appPublicData
+ALLOWED_TABLES=Customers,Products,Orders
+ALLOWED_VIEWS=Public View,Customer Facing
+```
+
+### Blocklist Mode
+Block access to specific items:
+
+```bash
+ACCESS_CONTROL_MODE=blocklist
+BLOCKED_TABLES=Passwords,PersonalInfo,Salaries
+BLOCKED_BASES=appSensitiveHR
+```
+
+### Both Mode
+Combine allowlist and blocklist rules:
+
+```bash
+ACCESS_CONTROL_MODE=both
+ALLOWED_BASES=appProductionData,appPublicData
+BLOCKED_TABLES=Salaries,PersonalInfo
+```
+
+**⚠️ Important**: If no access control variables are configured, the AI has access to ALL bases, tables, and views. Always configure access control for production deployments.
+
+## Architecture
+
+The MCP Airtable server follows a clean, modular architecture:
+
+```
+src/
+├── index.ts          # STDIO transport entry point
+├── server.ts         # HTTP transport entry point
+├── config/           # Configuration management
+├── tools/            # Tool definitions and registry
+├── handlers/         # Tool implementation handlers
+├── services/         # External service clients
+│   ├── airtable/     # Airtable API client
+│   └── storage/      # S3/GCS clients
+└── utils/            # Shared utilities
+```
+
+## Development
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/mcp-airtable.git
+cd mcp-airtable
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+```
+
+### Running in Development
+
+```bash
+# Run with hot reload (STDIO mode)
+npm run dev
+
+# Run HTTP server with hot reload
+npm run dev:server
+```
+
+### Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+## Security Considerations
+
+1. **API Keys**: Never commit API keys to version control
+2. **Authentication**: Use `MCP_AUTH_TOKEN` in production environments
+3. **Access Control**: Configure allowed/blocked bases and tables
+4. **Rate Limiting**: Enable to prevent API abuse
+5. **CORS**: Configure appropriate origins for your use case
+
+## Deployment
+
+### Docker
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist ./dist
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+```
+
+### Environment Variables
+
+For production deployments, ensure all sensitive configuration is provided through environment variables or a secure configuration management system.
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- 📚 [Documentation](https://github.com/your-org/mcp-airtable/wiki)
+- 🐛 [Issue Tracker](https://github.com/your-org/mcp-airtable/issues)
+- 💬 [Discussions](https://github.com/your-org/mcp-airtable/discussions)
+
+## Acknowledgments
+
+Built with the [Model Context Protocol SDK](https://github.com/anthropics/model-context-protocol) by Anthropic.
