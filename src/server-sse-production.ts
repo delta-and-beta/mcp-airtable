@@ -195,11 +195,15 @@ app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
     return;
   }
   
-  logger.debug('n8n POST request', { body: req.body });
+  const message = req.body;
+  logger.debug('n8n POST request', { 
+    method: message?.method,
+    id: message?.id,
+    params: message?.params 
+  });
   
   // Handle MCP protocol messages
   try {
-    const message = req.body;
     
     // Get the server instance for this connection (if exists)
     const connectionKey = `${req.ip}-${token}`;
@@ -250,9 +254,11 @@ app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
           jsonrpc: '2.0',
           id: message.id,
           result: {
-            protocolVersion: '2024-11-05',
+            protocolVersion: '2025-03-26', // Match n8n's protocol version
             capabilities: {
               tools: {},
+              resources: {},
+              prompts: {}
             },
             serverInfo: {
               name: 'mcp-airtable',
@@ -261,11 +267,17 @@ app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
           }
         });
       } else if (message.method === 'tools/list') {
+        logger.debug('n8n requesting tools list');
         res.json({
           jsonrpc: '2.0',
           id: message.id,
           result: {
-            tools: toolDefinitions,
+            tools: toolDefinitions.map(tool => ({
+              ...tool,
+              name: tool.name,
+              description: tool.description || '',
+              inputSchema: tool.inputSchema || { type: 'object', properties: {} }
+            })),
           }
         });
       } else if (message.method === 'tools/call') {
