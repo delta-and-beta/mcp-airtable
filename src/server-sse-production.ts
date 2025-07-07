@@ -171,6 +171,92 @@ app.get('/mcp', authenticate, async (req, res) => {
   }
 });
 
+// n8n-specific endpoint with relaxed authentication
+app.get('/mcp/n8n/:token', async (req, res) => {
+  const { token } = req.params;
+  
+  // Validate token
+  if (config.MCP_AUTH_TOKEN && token !== config.MCP_AUTH_TOKEN) {
+    logger.warn('Invalid token in n8n endpoint', { ip: req.ip });
+    res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid token')));
+    return;
+  }
+  
+  const connectionId = crypto.randomBytes(16).toString('hex');
+  logger.info('New n8n MCP SSE connection', { connectionId, ip: req.ip });
+  
+  try {
+    const transport = new SSEServerTransport('/mcp/n8n/' + token, res);
+    
+    const server = new Server(
+      {
+        name: 'mcp-airtable',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          tools: {},
+        },
+      }
+    );
+
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
+      return {
+        tools: toolDefinitions,
+      };
+    });
+
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      
+      const handler = toolHandlers[name as keyof typeof toolHandlers];
+      if (!handler) {
+        throw new Error(`Unknown tool: ${name}`);
+      }
+      
+      try {
+        logger.debug('Executing tool from n8n', { tool: name, connectionId });
+        const result = await handler(args);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        logger.error('Tool execution failed', error as Error, { tool: name, connectionId });
+        const errorResponse = formatErrorResponse(error as Error);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(errorResponse, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    });
+
+    await server.connect(transport);
+    
+    // Handle connection cleanup
+    req.on('close', () => {
+      logger.info('n8n MCP SSE connection closed', { connectionId });
+      server.close().catch(err => {
+        logger.error('Error closing server', err);
+      });
+    });
+  } catch (error) {
+    logger.error('Failed to establish n8n MCP connection', error as Error, { connectionId });
+    res.status(500).json(formatErrorResponse(error as Error));
+  }
+});
+
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error('Unhandled error', err);
