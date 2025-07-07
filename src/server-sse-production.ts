@@ -49,7 +49,7 @@ app.get('/health', async (_req, res) => {
   res.json(health);
 });
 
-// Authentication middleware
+// Authentication middleware with query parameter fallback
 const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (!config.MCP_AUTH_TOKEN) {
     if (config.NODE_ENV === 'production') {
@@ -59,21 +59,39 @@ const authenticate = (req: express.Request, res: express.Response, next: express
     return;
   }
 
+  // Check Authorization header first
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    logger.warn('Missing or invalid authorization header', { ip: req.ip });
-    res.status(401).json(formatErrorResponse(new AuthenticationError('Missing authorization header')));
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    if (token === config.MCP_AUTH_TOKEN) {
+      next();
+      return;
+    }
+  }
+
+  // Fallback to query parameter for SSE clients that don't support headers
+  const queryToken = req.query.token as string;
+  if (queryToken === config.MCP_AUTH_TOKEN) {
+    logger.debug('Authenticated via query parameter', { ip: req.ip });
+    next();
     return;
   }
 
-  const token = authHeader.substring(7);
-  if (token !== config.MCP_AUTH_TOKEN) {
-    logger.warn('Invalid authentication token', { ip: req.ip });
-    res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid token')));
+  // Check X-Auth-Token header as another fallback
+  const xAuthToken = req.headers['x-auth-token'] as string;
+  if (xAuthToken === config.MCP_AUTH_TOKEN) {
+    logger.debug('Authenticated via X-Auth-Token header', { ip: req.ip });
+    next();
     return;
   }
 
-  next();
+  logger.warn('Authentication failed', { 
+    ip: req.ip,
+    hasAuthHeader: !!authHeader,
+    hasQueryToken: !!queryToken,
+    hasXAuthToken: !!xAuthToken
+  });
+  res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid or missing authentication')));
 };
 
 // MCP SSE endpoint
