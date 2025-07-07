@@ -304,7 +304,7 @@ app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
             id: message.id,
             error: {
               code: -32603,
-              message: error.message,
+              message: error instanceof Error ? error.message : 'Unknown error',
             }
           });
         }
@@ -331,7 +331,7 @@ app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
     res.status(500).json({
       error: {
         code: -32603,
-        message: error.message,
+        message: error instanceof Error ? error.message : 'Unknown error',
       }
     });
   }
