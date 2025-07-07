@@ -226,6 +226,26 @@ app.post('/mcp', authenticate, async (req, res) => {
         }
         break;
 
+      case 'resources/list':
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          result: {
+            resources: [],
+          },
+        });
+        break;
+
+      case 'prompts/list':
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          result: {
+            prompts: [],
+          },
+        });
+        break;
+
       default:
         res.json({
           jsonrpc: '2.0',
