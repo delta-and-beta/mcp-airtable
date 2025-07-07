@@ -6,10 +6,10 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { config as loadEnv } from 'dotenv';
-import { validateConfig } from './utils/config.js';
+import { validateConfig } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { formatErrorResponse } from './utils/errors.js';
-import { toolHandlers, toolDefinitions } from './handlers/tools.js';
+import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 
 // Load environment variables
@@ -20,12 +20,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
 
-// Try to load .env from project root
-loadEnv({ path: join(projectRoot, '.env') });
+// Only load .env file in development
+if (process.env.NODE_ENV !== 'production') {
+  // Try to load .env from project root
+  loadEnv({ path: join(projectRoot, '.env') });
 
-// Also try current directory as fallback
-if (!process.env.AIRTABLE_API_KEY) {
-  loadEnv();
+  // Also try current directory as fallback
+  if (!process.env.AIRTABLE_API_KEY) {
+    loadEnv();
+  }
 }
 
 validateConfig();

@@ -536,7 +536,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     enforceTableAccess(args.tableName);
     
     // For single records, use the standard client with rate limiting
-    const { airtableRateLimiter } = await import('../utils/enhanced-rate-limiter.js');
+    const { airtableRateLimiter } = await import('../utils/rate-limiter-redis.js');
     
     return airtableRateLimiter.executeWithRetry(
       () => getClient().createRecord(args.tableName, args.fields, {
@@ -555,7 +555,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     typecast?: boolean;
   }) => {
     // For single records, use the standard client with rate limiting
-    const { airtableRateLimiter } = await import('../utils/enhanced-rate-limiter.js');
+    const { airtableRateLimiter } = await import('../utils/rate-limiter-redis.js');
     
     return airtableRateLimiter.executeWithRetry(
       () => getClient().updateRecord(args.tableName, args.recordId, args.fields, {
@@ -686,7 +686,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const client = getQueuedClient();
     
     // Use enhanced rate limiter
-    const { airtableRateLimiter } = await import('../utils/enhanced-rate-limiter.js');
+    const { airtableRateLimiter } = await import('../utils/rate-limiter-redis.js');
     
     return airtableRateLimiter.executeWithRetry(
       () => client.batchDelete(args.tableName, args.recordIds, {
@@ -730,7 +730,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     }
 
     // Use enhanced rate limiter
-    const { airtableRateLimiter } = await import('../utils/enhanced-rate-limiter.js');
+    const { airtableRateLimiter } = await import('../utils/rate-limiter-redis.js');
     
     return airtableRateLimiter.executeWithRetry(
       () => client.batchUpsert(args.tableName, args.records, {

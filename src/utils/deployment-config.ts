@@ -17,7 +17,6 @@ export interface DeploymentConfig {
     s3: boolean;
     gcs: boolean;
     queue: boolean;
-    sse: boolean;
   };
   limits: {
     maxRequestSize?: number;
@@ -41,7 +40,6 @@ const DEFAULT_CONFIG: DeploymentConfig = {
     s3: false,
     gcs: false,
     queue: false,
-    sse: false,
   },
   limits: {
     maxRequestSize: 10 * 1024 * 1024, // 10MB
@@ -91,7 +89,6 @@ export function loadDeploymentConfig(): DeploymentConfig {
       s3: process.env.AWS_S3_BUCKET ? true : false,
       gcs: process.env.GCS_BUCKET ? true : false,
       queue: process.env.ENABLE_QUEUE === 'true',
-      sse: process.env.ENABLE_SSE === 'true',
     },
     limits: {
       maxRequestSize: process.env.MAX_REQUEST_SIZE 

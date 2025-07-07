@@ -2,6 +2,15 @@
 
 The MCP Airtable server includes comprehensive access control features to restrict which bases, tables, and views the AI assistant can access. This prevents the AI from accessing or modifying sensitive data.
 
+## Default Behavior (No Configuration)
+
+**⚠️ Important**: If you don't configure any access control variables, the server allows access to **ALL** bases, tables, and views. This is intentional for:
+- Backward compatibility
+- Easy development setup
+- Quick testing
+
+However, for production use, you should always configure appropriate restrictions.
+
 ## Overview
 
 Access control works at three levels:
@@ -49,6 +58,32 @@ BLOCKED_TABLES=ExecutiveCompensation,SSNs
 | `BLOCKED_BASES` | Comma-separated list of blocked base IDs | `appSensitive` |
 | `BLOCKED_TABLES` | Comma-separated list of blocked table names | `Passwords,SSNs` |
 | `BLOCKED_VIEWS` | Comma-separated list of blocked view names | `Internal Only` |
+
+## Default Behavior Details
+
+When no access control variables are set:
+
+```bash
+# These are all empty/not set:
+ALLOWED_BASES=
+ALLOWED_TABLES=
+ALLOWED_VIEWS=
+BLOCKED_BASES=
+BLOCKED_TABLES=
+BLOCKED_VIEWS=
+
+# Result:
+# - Mode: allowlist (default)
+# - Effect: ALL resources are accessible
+# - Startup log: "No access restrictions (mode: allowlist)"
+```
+
+This means:
+- ✅ AI can list and access all bases
+- ✅ AI can access all tables in any base
+- ✅ AI can use all views
+- ✅ AI can create, read, update, delete in any table
+- ⚠️ No restrictions are applied
 
 ## Examples
 
