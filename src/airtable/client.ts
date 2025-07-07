@@ -361,4 +361,51 @@ export class AirtableClient {
 
     return results;
   }
+
+  async createTable(
+    name: string,
+    fields: Array<{
+      name: string;
+      type: string;
+      options?: Record<string, any>;
+      description?: string;
+    }>,
+    options: {
+      baseId?: string;
+      description?: string;
+    } = {}
+  ) {
+    const baseId = options.baseId || this.defaultBaseId;
+    if (!baseId) {
+      throw new Error('Base ID is required for creating tables');
+    }
+
+    const response = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${baseId}/tables`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          description: options.description,
+          fields: fields.map(field => ({
+            name: field.name,
+            type: field.type,
+            options: field.options,
+            description: field.description,
+          })),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to create table: ${response.statusText} - ${error}`);
+    }
+
+    return response.json();
+  }
 }
