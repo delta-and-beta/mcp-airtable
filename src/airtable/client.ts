@@ -16,6 +16,12 @@ export class AirtableClient {
       throw new Error('Airtable API key is required');
     }
 
+    console.log('[DEBUG] AirtableClient constructor:', {
+      apiKeyLength: config.apiKey.length,
+      apiKeyPrefix: config.apiKey.substring(0, 10) + '...',
+      hasBaseId: !!config.baseId
+    });
+
     this.apiKey = config.apiKey;
     this.airtable = new Airtable({ apiKey: config.apiKey });
     this.defaultBaseId = config.baseId;
