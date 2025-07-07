@@ -38,3 +38,6 @@ coverage/
 # These files will be different per deployment branch
 deploy/*/config.json
 deploy/*/secrets/
+
+# Claude configuration
+CLAUDE.md
