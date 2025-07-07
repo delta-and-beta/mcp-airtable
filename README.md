@@ -120,6 +120,7 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 ### Table Operations
 
 - `list_tables` - List all tables in a base
+- `create_table` - Create a new table with specified fields
 - `list_views` - List all views in a table
 
 ### Record Operations
@@ -180,6 +181,52 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
       "Status": "Not Started",
       "Priority": "Medium"
     }
+  }
+}
+```
+
+### Create a table
+
+```json
+{
+  "tool": "create_table",
+  "arguments": {
+    "name": "Projects",
+    "description": "Track project progress",
+    "fields": [
+      {
+        "name": "Name",
+        "type": "singleLineText",
+        "description": "Project name"
+      },
+      {
+        "name": "Status",
+        "type": "singleSelect",
+        "options": {
+          "choices": [
+            { "name": "Planning", "color": "blueBright" },
+            { "name": "In Progress", "color": "yellowBright" },
+            { "name": "Completed", "color": "greenBright" }
+          ]
+        }
+      },
+      {
+        "name": "Budget",
+        "type": "currency",
+        "options": {
+          "precision": 2,
+          "symbol": "$"
+        }
+      },
+      {
+        "name": "Start Date",
+        "type": "date"
+      },
+      {
+        "name": "Team Members",
+        "type": "multipleCollaborators"
+      }
+    ]
   }
 }
 ```
