@@ -172,6 +172,7 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 
 - `list_tables` - List all tables in a base
 - `create_table` - Create a new table with specified fields
+- `update_table` - Update table properties (name or description)
 - `list_views` - List all views in a table
 
 ### Record Operations
@@ -278,6 +279,19 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
         "type": "multipleCollaborators"
       }
     ]
+  }
+}
+```
+
+### Update a table
+
+```json
+{
+  "tool": "update_table",
+  "arguments": {
+    "tableIdOrName": "Projects",
+    "name": "Active Projects",
+    "description": "Track all active project progress"
   }
 }
 ```
