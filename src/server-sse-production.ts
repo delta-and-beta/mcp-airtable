@@ -112,6 +112,16 @@ app.get('/mcp', authenticate, async (req, res) => {
   const connectionId = crypto.randomBytes(16).toString('hex');
   logger.info('New MCP SSE connection', { connectionId, ip: req.ip });
   
+  // Set headers to disable buffering for SSE
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  // Send initial comment to establish connection
+  res.write(':ok\n\n');
+  
   try {
     const transport = new SSEServerTransport('/mcp', res);
     
@@ -171,9 +181,19 @@ app.get('/mcp', authenticate, async (req, res) => {
 
     await server.connect(transport);
     
+    // Send heartbeat every 30 seconds to keep connection alive
+    const heartbeatInterval = setInterval(() => {
+      try {
+        res.write(':heartbeat\n\n');
+      } catch (error) {
+        clearInterval(heartbeatInterval);
+      }
+    }, 30000);
+    
     // Handle connection cleanup
     req.on('close', () => {
       logger.info('MCP SSE connection closed', { connectionId });
+      clearInterval(heartbeatInterval);
       server.close().catch(err => {
         logger.error('Error closing server', err);
       });
@@ -368,6 +388,16 @@ app.get('/mcp/n8n/:token', async (req, res) => {
   const connectionId = crypto.randomBytes(16).toString('hex');
   logger.info('New n8n MCP SSE connection', { connectionId, ip: req.ip });
   
+  // Set headers to disable buffering for SSE
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  // Send initial comment to establish connection
+  res.write(':ok\n\n');
+  
   try {
     const transport = new SSEServerTransport('/mcp/n8n/' + token, res);
     
@@ -431,9 +461,19 @@ app.get('/mcp/n8n/:token', async (req, res) => {
     const connectionKey = `${req.ip}-${token}`;
     n8nConnections.set(connectionKey, server);
     
+    // Send heartbeat every 30 seconds to keep connection alive
+    const heartbeatInterval = setInterval(() => {
+      try {
+        res.write(':heartbeat\n\n');
+      } catch (error) {
+        clearInterval(heartbeatInterval);
+      }
+    }, 30000);
+    
     // Handle connection cleanup
     req.on('close', () => {
       logger.info('n8n MCP SSE connection closed', { connectionId });
+      clearInterval(heartbeatInterval);
       n8nConnections.delete(connectionKey);
       server.close().catch(err => {
         logger.error('Error closing server', err);
