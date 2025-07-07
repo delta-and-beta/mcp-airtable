@@ -34,9 +34,12 @@ app.use(requestLogger);
 // Version endpoint to check deployment
 app.get('/version', (_req, res) => {
   res.json({
-    version: '1.0.1',
-    features: ['query-auth', 'n8n-endpoint'],
-    endpoints: ['/mcp', '/mcp/n8n/:token'],
+    version: '1.0.2',
+    features: ['query-auth', 'n8n-endpoint', 'http-streamable'],
+    endpoints: {
+      sse: ['/mcp', '/mcp/n8n/:token'],
+      streamable: ['/stream', '/stream/n8n/:token']
+    },
     lastUpdated: '2025-01-07'
   });
 });
@@ -440,6 +443,122 @@ app.get('/mcp/n8n/:token', async (req, res) => {
     logger.error('Failed to establish n8n MCP connection', error as Error, { connectionId });
     res.status(500).json(formatErrorResponse(error as Error));
   }
+});
+
+// HTTP Streamable endpoint (for n8n compatibility)
+app.post('/stream', authenticate, async (req, res) => {
+  const message = req.body;
+  
+  logger.debug('HTTP Streamable request', { 
+    method: message?.method,
+    id: message?.id,
+  });
+
+  try {
+    if (message.method === 'initialize') {
+      res.json({
+        jsonrpc: '2.0',
+        id: message.id,
+        result: {
+          protocolVersion: '2025-03-26',
+          capabilities: {
+            tools: {},
+            resources: {},
+            prompts: {}
+          },
+          serverInfo: {
+            name: 'mcp-airtable',
+            version: '1.0.0',
+          }
+        }
+      });
+    } else if (message.method === 'tools/list') {
+      res.json({
+        jsonrpc: '2.0',
+        id: message.id,
+        result: {
+          tools: toolDefinitions,
+        }
+      });
+    } else if (message.method === 'tools/call') {
+      const { name, arguments: args } = message.params;
+      const handler = toolHandlers[name as keyof typeof toolHandlers];
+      
+      if (!handler) {
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32601,
+            message: `Unknown tool: ${name}`,
+          }
+        });
+        return;
+      }
+      
+      try {
+        const result = await handler(args);
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          result: {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          }
+        });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32603,
+            message: errorMessage,
+          }
+        });
+      }
+    } else {
+      res.json({
+        jsonrpc: '2.0',
+        id: message.id,
+        error: {
+          code: -32601,
+          message: `Method not found: ${message.method}`,
+        }
+      });
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('HTTP Streamable request error', error instanceof Error ? error : new Error(errorMessage));
+    res.json({
+      jsonrpc: '2.0',
+      id: message.id,
+      error: {
+        code: -32603,
+        message: errorMessage,
+      }
+    });
+  }
+});
+
+// HTTP Streamable endpoint with token in path for n8n
+app.post('/stream/n8n/:token', async (req, res) => {
+  const { token } = req.params;
+  
+  if (config.MCP_AUTH_TOKEN && token !== config.MCP_AUTH_TOKEN) {
+    res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid token')));
+    return;
+  }
+  
+  // Forward to main stream handler
+  req.headers.authorization = `Bearer ${token}`;
+  req.url = '/stream';
+  req.path = '/stream';
+  app._router.handle(req, res);
 });
 
 // Global error handler
