@@ -181,7 +181,163 @@ app.get('/mcp', authenticate, async (req, res) => {
   }
 });
 
-// n8n-specific endpoint with relaxed authentication
+// Store active n8n SSE connections
+const n8nConnections = new Map<string, any>();
+
+// n8n-specific POST endpoint for handling requests
+app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
+  const { token } = req.params;
+  
+  // Validate token
+  if (config.MCP_AUTH_TOKEN && token !== config.MCP_AUTH_TOKEN) {
+    logger.warn('Invalid token in n8n POST endpoint', { ip: req.ip });
+    res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid token')));
+    return;
+  }
+  
+  logger.debug('n8n POST request', { body: req.body });
+  
+  // Handle MCP protocol messages
+  try {
+    const message = req.body;
+    
+    // Get the server instance for this connection (if exists)
+    const connectionKey = `${req.ip}-${token}`;
+    const server = n8nConnections.get(connectionKey);
+    
+    if (!server) {
+      // Create a temporary server instance for request handling
+      const tempServer = new Server(
+        {
+          name: 'mcp-airtable',
+          version: '1.0.0',
+        },
+        {
+          capabilities: {
+            tools: {},
+          },
+        }
+      );
+
+      tempServer.setRequestHandler(ListToolsRequestSchema, async () => {
+        return {
+          tools: toolDefinitions,
+        };
+      });
+
+      tempServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+        const { name, arguments: args } = request.params;
+        
+        const handler = toolHandlers[name as keyof typeof toolHandlers];
+        if (!handler) {
+          throw new Error(`Unknown tool: ${name}`);
+        }
+        
+        const result = await handler(args);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      });
+      
+      // Handle different message types
+      if (message.method === 'initialize') {
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          result: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: {},
+            },
+            serverInfo: {
+              name: 'mcp-airtable',
+              version: '1.0.0',
+            }
+          }
+        });
+      } else if (message.method === 'tools/list') {
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          result: {
+            tools: toolDefinitions,
+          }
+        });
+      } else if (message.method === 'tools/call') {
+        const { name, arguments: args } = message.params;
+        const handler = toolHandlers[name as keyof typeof toolHandlers];
+        
+        if (!handler) {
+          res.json({
+            jsonrpc: '2.0',
+            id: message.id,
+            error: {
+              code: -32601,
+              message: `Unknown tool: ${name}`,
+            }
+          });
+          return;
+        }
+        
+        try {
+          const result = await handler(args);
+          res.json({
+            jsonrpc: '2.0',
+            id: message.id,
+            result: {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(result, null, 2),
+                },
+              ],
+            }
+          });
+        } catch (error) {
+          res.json({
+            jsonrpc: '2.0',
+            id: message.id,
+            error: {
+              code: -32603,
+              message: error.message,
+            }
+          });
+        }
+      } else {
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32601,
+            message: `Method not found: ${message.method}`,
+          }
+        });
+      }
+    } else {
+      // For existing connections, just return success
+      res.json({
+        jsonrpc: '2.0',
+        id: message.id,
+        result: {}
+      });
+    }
+  } catch (error) {
+    logger.error('n8n POST request error', error as Error);
+    res.status(500).json({
+      error: {
+        code: -32603,
+        message: error.message,
+      }
+    });
+  }
+});
+
+// n8n-specific GET endpoint for SSE connection
 app.get('/mcp/n8n/:token', async (req, res) => {
   const { token } = req.params;
   
@@ -254,9 +410,14 @@ app.get('/mcp/n8n/:token', async (req, res) => {
 
     await server.connect(transport);
     
+    // Store the server instance for POST requests
+    const connectionKey = `${req.ip}-${token}`;
+    n8nConnections.set(connectionKey, server);
+    
     // Handle connection cleanup
     req.on('close', () => {
       logger.info('n8n MCP SSE connection closed', { connectionId });
+      n8nConnections.delete(connectionKey);
       server.close().catch(err => {
         logger.error('Error closing server', err);
       });
