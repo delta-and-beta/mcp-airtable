@@ -554,11 +554,25 @@ app.post('/stream/n8n/:token', async (req, res) => {
     return;
   }
   
-  // Forward to main stream handler
+  // Forward to main stream handler with authentication
+  const message = req.body;
+  
+  logger.debug('HTTP Streamable request via n8n endpoint', { 
+    method: message?.method,
+    id: message?.id,
+  });
+  
+  // Reuse the stream endpoint logic
   req.headers.authorization = `Bearer ${token}`;
-  req.url = '/stream';
-  req.path = '/stream';
-  app._router.handle(req, res);
+  const streamHandler = app._router.stack.find((layer: any) => 
+    layer.route?.path === '/stream' && layer.route?.methods?.post
+  );
+  
+  if (streamHandler && streamHandler.route.stack[1]) {
+    streamHandler.route.stack[1].handle(req, res);
+  } else {
+    res.status(500).json({ error: 'Stream handler not found' });
+  }
 });
 
 // Global error handler

@@ -152,19 +152,55 @@ app.post('/stream', authenticate, async (req, res) => {
         }
       });
     } else if (message.method === 'tools/list') {
-      const tools = await mcpServer.listTools();
       res.json({
         jsonrpc: '2.0',
         id: message.id,
-        result: tools,
+        result: {
+          tools: toolDefinitions,
+        },
       });
     } else if (message.method === 'tools/call') {
-      const result = await mcpServer.callTool(message.params.name, message.params.arguments || {});
-      res.json({
-        jsonrpc: '2.0',
-        id: message.id,
-        result: result,
-      });
+      const { name, arguments: args } = message.params;
+      const handler = toolHandlers[name as keyof typeof toolHandlers];
+      
+      if (!handler) {
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32601,
+            message: `Unknown tool: ${name}`,
+          }
+        });
+        return;
+      }
+      
+      try {
+        const result = await handler(args);
+        const sanitizedResult = prepareResponse(result);
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          result: {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(sanitizedResult, null, 2),
+              },
+            ],
+          }
+        });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        res.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32603,
+            message: errorMessage,
+          }
+        });
+      }
     } else {
       res.json({
         jsonrpc: '2.0',
@@ -200,14 +236,25 @@ app.post('/stream/n8n/:token', async (req, res) => {
     return;
   }
   
-  // Forward to main handler
-  req.headers.authorization = `Bearer ${token}`;
-  app._router.handle(req, res, () => {
-    // This will forward to the /stream endpoint with proper auth
-    req.url = '/stream';
-    req.path = '/stream';
-    app._router.handle(req, res);
+  // Forward to main stream handler with authentication
+  const message = req.body;
+  
+  logger.debug('HTTP Streamable request via n8n endpoint', { 
+    method: message?.method,
+    id: message?.id,
   });
+  
+  // Reuse the stream endpoint logic
+  req.headers.authorization = `Bearer ${token}`;
+  const streamHandler = app._router.stack.find((layer: any) => 
+    layer.route?.path === '/stream' && layer.route?.methods?.post
+  );
+  
+  if (streamHandler && streamHandler.route.stack[1]) {
+    streamHandler.route.stack[1].handle(req, res);
+  } else {
+    res.status(500).json({ error: 'Stream handler not found' });
+  }
 });
 
 // Start server
