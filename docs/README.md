@@ -7,6 +7,7 @@ Welcome to the comprehensive documentation for the MCP (Model Context Protocol) 
 ### Getting Started
 - [Installation & Setup](../README.md#installation)
 - [Claude Desktop Configuration](../deploy/claude-desktop/README.md)
+- [MCP-Remote Setup Guide](./guides/claude-desktop-mcp-remote.md) - **NEW!** Connect to remote servers
 - [API Key Authentication](../README.md#api-key-authentication)
 
 ### Usage Guides

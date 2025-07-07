@@ -73,7 +73,7 @@ Please list tables in my Airtable base. Use API key: patXXXXXXXXXXXXXX and base 
 
 ## Remote Connection (HTTP)
 
-To connect to a remote MCP server, use the MCP proxy:
+To connect to a remote MCP server, use mcp-remote:
 
 ```json
 {
@@ -82,7 +82,8 @@ To connect to a remote MCP server, use the MCP proxy:
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-proxy",
+        "mcp-remote@latest",
+        "connect",
         "https://your-server.com/mcp"
       ],
       "env": {
@@ -92,6 +93,10 @@ To connect to a remote MCP server, use the MCP proxy:
   }
 }
 ```
+
+> **Note**: We recommend using `mcp-remote` instead of `@modelcontextprotocol/server-proxy` as it's specifically designed for remote connections.
+
+For detailed remote setup instructions, see the [MCP-Remote Setup Guide](../../docs/guides/claude-desktop-mcp-remote.md).
 
 ### Configuration Options
 
