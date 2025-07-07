@@ -428,7 +428,7 @@ export class AirtableClient {
     let tableId = tableIdOrName;
     if (!tableIdOrName.startsWith('tbl')) {
       // If it doesn't look like a table ID, try to find it by name
-      const tablesResponse = await this.listTables(baseId);
+      const tablesResponse = await this.listTables(baseId) as any;
       const table = tablesResponse.tables?.find((t: any) => t.name === tableIdOrName);
       if (!table) {
         throw new Error(`Table '${tableIdOrName}' not found`);
