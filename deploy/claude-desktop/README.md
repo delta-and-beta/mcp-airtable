@@ -2,9 +2,19 @@
 
 This directory contains configuration examples for connecting Claude Desktop to the MCP Airtable server.
 
+## API Key Authentication Options
+
+The MCP Airtable server now supports flexible API key authentication:
+
+1. **Environment Variable** (traditional method)
+2. **Per-Request API Key** (new, more flexible)
+3. **Mixed Mode** (environment variable as default, override per-request)
+
 ## Local Connection (STDIO)
 
-For local development, use the standard STDIO transport:
+### Option 1: With Environment API Key
+
+For local development with a fixed API key:
 
 ```json
 {
@@ -13,14 +23,39 @@ For local development, use the standard STDIO transport:
       "command": "node",
       "args": ["/path/to/mcp-airtable/dist/index.js"],
       "env": {
-        "AIRTABLE_API_KEY": "your_api_key_here"
+        "AIRTABLE_API_KEY": "your_api_key_here",
+        "AIRTABLE_BASE_ID": "appXXXXXXXXXXXXXX"
       }
     }
   }
 }
 ```
 
-Or using npx:
+### Option 2: Without Environment API Key
+
+For multi-tenant scenarios where you'll provide the API key per-request:
+
+```json
+{
+  "mcpServers": {
+    "airtable": {
+      "command": "node",
+      "args": ["/path/to/mcp-airtable/dist/index.js"],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}
+```
+
+Then in Claude, you can provide the API key when calling tools:
+
+```
+Please list tables in my Airtable base. Use API key: patXXXXXXXXXXXXXX and base ID: appYYYYYYYYYYYYYY
+```
+
+### Option 3: Using npx
 
 ```json
 {
@@ -88,10 +123,34 @@ If you need additional headers, you can use environment variables:
 }
 ```
 
+## Using Per-Request API Keys in Claude
+
+When the server is configured without an environment API key, Claude can provide credentials in several ways:
+
+### Direct in Conversation
+```
+"Please list all tables in Airtable base appXXXXXXXXXXXXXX using API key patYYYYYYYYYYYYYY"
+```
+
+### Structured Request
+```
+"I need to work with my Airtable data:
+- API Key: patYYYYYYYYYYYYYY
+- Base ID: appXXXXXXXXXXXXXX
+
+Please show me all tables and their schemas."
+```
+
+### The MCP server will automatically extract the API key from:
+1. The conversation context when mentioned
+2. Tool parameters if explicitly provided
+3. Environment variables as fallback
+
 ## Environment Variables
 
 You can configure additional options through environment variables:
 
+- `AIRTABLE_API_KEY` - Default API key (optional, can be provided per-request)
 - `AIRTABLE_BASE_ID` - Default base ID for operations
 - `ALLOWED_BASES` - Comma-separated list of allowed base IDs
 - `ALLOWED_TABLES` - Comma-separated list of allowed tables

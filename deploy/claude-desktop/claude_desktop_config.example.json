@@ -1,11 +1,18 @@
 {
   "mcpServers": {
-    "airtable-local": {
+    "airtable-with-env-key": {
       "command": "node",
       "args": ["/path/to/mcp-airtable/dist/index.js"],
       "env": {
         "AIRTABLE_API_KEY": "your_airtable_api_key_here",
         "AIRTABLE_BASE_ID": "appXXXXXXXXXXXXXX"
+      }
+    },
+    "airtable-without-key": {
+      "command": "node",
+      "args": ["/path/to/mcp-airtable/dist/index.js"],
+      "env": {
+        "// Note": "API key will be provided per-request"
       }
     },
     "airtable-remote": {
