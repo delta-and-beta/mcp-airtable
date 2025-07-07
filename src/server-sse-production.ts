@@ -31,6 +31,16 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(requestLogger);
 
+// Version endpoint to check deployment
+app.get('/version', (_req, res) => {
+  res.json({
+    version: '1.0.1',
+    features: ['query-auth', 'n8n-endpoint'],
+    endpoints: ['/mcp', '/mcp/n8n/:token'],
+    lastUpdated: '2025-01-07'
+  });
+});
+
 // Health check endpoint with dependency checks
 app.get('/health', async (_req, res) => {
   const health = {
