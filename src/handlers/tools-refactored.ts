@@ -62,6 +62,7 @@ async function withErrorHandling<T>(
   try {
     return await operation();
   } catch (error: unknown) {
+    console.error('[ERROR] Operation failed:', error);
     if (error instanceof Error) {
       // Check for Airtable-specific errors
       if ('statusCode' in error) {
@@ -131,7 +132,14 @@ export const toolHandlers = {
   },
 
   get_records: async (args: unknown) => {
+    console.log('[DEBUG] get_records args:', JSON.stringify(args, null, 2));
     const validated = validateInput(GetRecordsSchema, args);
+    console.log('[DEBUG] validated args:', { 
+      hasApiKey: !!validated.airtableApiKey,
+      apiKeyLength: validated.airtableApiKey?.length,
+      tableName: validated.tableName,
+      baseId: validated.baseId 
+    });
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
