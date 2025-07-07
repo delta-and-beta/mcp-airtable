@@ -29,6 +29,68 @@ export const toolDefinitions: Tool[] = [
     },
   },
   {
+    name: 'create_table',
+    description: 'Create a new table in a base',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name of the table to create',
+        },
+        description: {
+          type: 'string',
+          description: 'Description of the table (optional)',
+        },
+        fields: {
+          type: 'array',
+          description: 'Fields to create in the table',
+          items: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Name of the field',
+              },
+              type: {
+                type: 'string',
+                description: 'Field type (e.g., singleLineText, number, singleSelect, etc.)',
+                enum: [
+                  'singleLineText', 'email', 'url', 'multilineText', 'number', 
+                  'percent', 'currency', 'singleSelect', 'multipleSelects',
+                  'singleCollaborator', 'multipleCollaborators', 'multipleRecordLinks',
+                  'date', 'dateTime', 'phoneNumber', 'multipleAttachments', 'checkbox',
+                  'formula', 'createdTime', 'rollup', 'count', 'lookup',
+                  'multipleLookupValues', 'autoNumber', 'barcode', 'rating',
+                  'richText', 'duration', 'lastModifiedTime', 'button',
+                  'createdBy', 'lastModifiedBy', 'externalSyncSource', 'aiText'
+                ],
+              },
+              description: {
+                type: 'string',
+                description: 'Description of the field (optional)',
+              },
+              options: {
+                type: 'object',
+                description: 'Field-specific options',
+                additionalProperties: true,
+              },
+            },
+            required: ['name', 'type'],
+            additionalProperties: false,
+          },
+          minItems: 1,
+        },
+        baseId: {
+          type: 'string',
+          description: 'The ID of the base (optional if default base is set)',
+        },
+      },
+      required: ['name', 'fields'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'list_views',
     description: 'List all views in a table',
     inputSchema: {
