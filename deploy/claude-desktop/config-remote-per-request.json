@@ -1,0 +1,41 @@
+{
+  "mcpServers": {
+    "airtable-prod": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "connect",
+        "https://mcp.yourcompany.com/airtable"
+      ],
+      "env": {
+        "MCP_AUTH_TOKEN": "your_server_auth_token",
+        "// Note": "Airtable API keys will be provided per-request in Claude"
+      }
+    },
+    "airtable-staging": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote@latest",
+        "connect",
+        "https://staging-mcp.yourcompany.com/airtable"
+      ],
+      "env": {
+        "MCP_AUTH_TOKEN": "staging_server_auth_token"
+      }
+    },
+    "airtable-local": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest", 
+        "connect",
+        "http://localhost:3000/mcp"
+      ],
+      "env": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      }
+    }
+  }
+}

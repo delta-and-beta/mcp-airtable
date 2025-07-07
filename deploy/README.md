@@ -68,7 +68,7 @@ docker run -p 3000:3000 \
 ## Environment Configuration
 
 ### Required Variables
-- `AIRTABLE_API_KEY` - Your Airtable API key
+- `AIRTABLE_API_KEY` - Your Airtable API key (optional if using per-request keys)
 
 ### Recommended for Production
 - `MCP_AUTH_TOKEN` - Bearer token for authentication
@@ -123,6 +123,33 @@ Check service health:
 curl http://your-server:3000/health
 ```
 
+## Connecting Claude Desktop
+
+### Using mcp-remote
+
+Configure Claude Desktop to connect to your deployed server:
+
+```json
+{
+  "mcpServers": {
+    "airtable-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "connect",
+        "https://your-deployed-server.com/mcp"
+      ],
+      "env": {
+        "MCP_AUTH_TOKEN": "your_auth_token"
+      }
+    }
+  }
+}
+```
+
+See the [MCP-Remote Setup Guide](../docs/guides/claude-desktop-mcp-remote.md) for detailed configuration options.
+
 ## Troubleshooting
 
 Enable debug mode:
@@ -135,3 +162,4 @@ Common issues:
 - **401 Unauthorized**: Check MCP_AUTH_TOKEN
 - **Connection refused**: Verify PORT and firewall
 - **Airtable errors**: Check API key and rate limits
+- **CORS errors**: Configure CORS_ORIGIN properly
