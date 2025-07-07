@@ -8,19 +8,25 @@ const ViewSchema = z.string().min(1);
 const FilePathSchema = z.string().min(1);
 const Base64Schema = z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/, 'Invalid base64 format');
 
-// Tool input schemas
-export const ListBasesSchema = z.object({});
+// Common schema for API key fields
+const ApiKeySchema = z.object({
+  airtableApiKey: z.string().optional(),
+  airtableBaseId: z.string().optional(),
+});
 
-export const ListTablesSchema = z.object({
+// Tool input schemas
+export const ListBasesSchema = ApiKeySchema.extend({});
+
+export const ListTablesSchema = ApiKeySchema.extend({
   baseId: BaseIdSchema.optional(),
 });
 
-export const ListViewsSchema = z.object({
+export const ListViewsSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   baseId: BaseIdSchema.optional(),
 });
 
-export const GetRecordsSchema = z.object({
+export const GetRecordsSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   baseId: BaseIdSchema.optional(),
   view: ViewSchema.optional(),
@@ -33,14 +39,14 @@ export const GetRecordsSchema = z.object({
   fields: z.array(z.string()).optional(),
 });
 
-export const CreateRecordSchema = z.object({
+export const CreateRecordSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   fields: z.record(z.unknown()),
   baseId: BaseIdSchema.optional(),
   typecast: z.boolean().optional(),
 });
 
-export const UpdateRecordSchema = z.object({
+export const UpdateRecordSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   recordId: RecordIdSchema,
   fields: z.record(z.unknown()),
@@ -48,17 +54,17 @@ export const UpdateRecordSchema = z.object({
   typecast: z.boolean().optional(),
 });
 
-export const DeleteRecordSchema = z.object({
+export const DeleteRecordSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   recordId: RecordIdSchema,
   baseId: BaseIdSchema.optional(),
 });
 
-export const GetSchemaSchema = z.object({
+export const GetSchemaSchema = ApiKeySchema.extend({
   baseId: BaseIdSchema.optional(),
 });
 
-export const UploadAttachmentSchema = z.object({
+export const UploadAttachmentSchema = ApiKeySchema.extend({
   filePath: FilePathSchema.optional(),
   base64Data: Base64Schema.optional(),
   filename: z.string().min(1).optional(),
@@ -71,7 +77,7 @@ export const UploadAttachmentSchema = z.object({
   { message: 'filename is required when using base64Data' }
 );
 
-export const BatchCreateSchema = z.object({
+export const BatchCreateSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   records: z.array(z.object({
     fields: z.record(z.unknown()),
@@ -80,7 +86,7 @@ export const BatchCreateSchema = z.object({
   typecast: z.boolean().optional(),
 });
 
-export const BatchUpdateSchema = z.object({
+export const BatchUpdateSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   records: z.array(z.object({
     id: RecordIdSchema,
@@ -90,13 +96,13 @@ export const BatchUpdateSchema = z.object({
   typecast: z.boolean().optional(),
 });
 
-export const BatchDeleteSchema = z.object({
+export const BatchDeleteSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   recordIds: z.array(RecordIdSchema).min(1).max(1000),
   baseId: BaseIdSchema.optional(),
 });
 
-export const BatchUpsertSchema = z.object({
+export const BatchUpsertSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   records: z.array(z.object({
     fields: z.record(z.unknown()),

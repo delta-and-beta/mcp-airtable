@@ -14,7 +14,7 @@ const ServerConfigSchema = z.object({
 
 // Airtable configuration schema
 const AirtableConfigSchema = z.object({
-  AIRTABLE_API_KEY: z.string().min(1, 'AIRTABLE_API_KEY is required'),
+  AIRTABLE_API_KEY: z.string().optional().describe('Default Airtable API key (can be provided per-request)'),
   AIRTABLE_BASE_ID: z.string().optional().describe('Default Airtable base ID'),
 });
 
