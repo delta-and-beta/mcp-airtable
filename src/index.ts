@@ -20,12 +20,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
 
-// Try to load .env from project root
-loadEnv({ path: join(projectRoot, '.env') });
+// Only load .env file in development
+if (process.env.NODE_ENV !== 'production') {
+  // Try to load .env from project root
+  loadEnv({ path: join(projectRoot, '.env') });
 
-// Also try current directory as fallback
-if (!process.env.AIRTABLE_API_KEY) {
-  loadEnv();
+  // Also try current directory as fallback
+  if (!process.env.AIRTABLE_API_KEY) {
+    loadEnv();
+  }
 }
 
 validateConfig();

@@ -14,7 +14,10 @@ import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 
 // Load environment variables
-loadEnv();
+// Only load .env file in development
+if (process.env.NODE_ENV !== 'production') {
+  loadEnv();
+}
 validateConfig();
 
 const app = express();

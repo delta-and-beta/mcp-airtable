@@ -12,6 +12,14 @@ import { ConfigSchema, type Config } from './schema.js';
  */
 export function validateConfig(): Config {
   try {
+    // Log environment variables for debugging (redact sensitive values)
+    console.log('🔍 Environment check:');
+    console.log(`  - NODE_ENV: ${process.env.NODE_ENV || '(not set)'}`);
+    console.log(`  - PORT: ${process.env.PORT || '(not set)'}`);
+    console.log(`  - AIRTABLE_API_KEY: ${process.env.AIRTABLE_API_KEY ? '***' + process.env.AIRTABLE_API_KEY.slice(-4) : '(not set)'}`);
+    console.log(`  - AIRTABLE_BASE_ID: ${process.env.AIRTABLE_BASE_ID || '(not set)'}`);
+    console.log(`  - MCP_AUTH_TOKEN: ${process.env.MCP_AUTH_TOKEN ? '***' + process.env.MCP_AUTH_TOKEN.slice(-4) : '(not set)'}`);
+    
     const config = ConfigSchema.parse(process.env);
     
     // Warn about missing auth token in production
@@ -19,7 +27,8 @@ export function validateConfig(): Config {
       console.warn('⚠️  WARNING: MCP_AUTH_TOKEN not set in production environment');
     }
     
-    // Log configuration summary in development
+    // Log configuration summary
+    console.log('✅ Configuration validated successfully');
     if (config.NODE_ENV === 'development') {
       console.log('📋 Configuration loaded:');
       console.log(`  - Environment: ${config.NODE_ENV}`);
@@ -38,6 +47,9 @@ export function validateConfig(): Config {
         console.error(`  - ${issue.path.join('.')}: ${issue.message}`);
       });
       console.error('\n💡 Please check your environment variables and .env file');
+      console.error('📌 Current environment variables:');
+      console.error(`  - AIRTABLE_API_KEY: ${process.env.AIRTABLE_API_KEY ? 'set' : 'NOT SET'}`);
+      console.error(`  - NODE_ENV: ${process.env.NODE_ENV || 'NOT SET'}`);
       process.exit(1);
     }
     throw error;
