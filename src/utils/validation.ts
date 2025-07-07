@@ -152,6 +152,16 @@ const FieldTypeSchema = z.enum([
   'aiText'
 ]);
 
+export const UpdateTableSchema = ApiKeySchema.extend({
+  tableIdOrName: z.string().min(1),
+  name: TableNameSchema.optional(),
+  description: z.string().optional(),
+  baseId: BaseIdSchema.optional(),
+}).refine(
+  (data) => data.name || data.description,
+  { message: 'At least one of name or description must be provided' }
+);
+
 export const CreateTableSchema = z.object({
   airtableApiKey: z.string().optional(),
   airtableBaseId: z.string().optional(),
