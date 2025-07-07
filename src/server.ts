@@ -158,7 +158,7 @@ app.post('/mcp', authenticate, async (req, res) => {
           jsonrpc: '2.0',
           id: message.id,
           result: {
-            protocolVersion: '1.0.0',
+            protocolVersion: '2024-11-05',
             capabilities: {
               tools: {},
               resources: {},
