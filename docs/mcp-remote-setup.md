@@ -42,7 +42,7 @@ Configure your Claude Desktop to use mcp-remote with custom headers:
 }
 ```
 
-Or using the Authorization header:
+Or using the Authorization header for Airtable PAT:
 
 ```json
 {
@@ -60,6 +60,31 @@ Or using the Authorization header:
   }
 }
 ```
+
+### With MCP Server Authentication
+
+If your MCP server requires authentication (recommended for production), pass both headers:
+
+```json
+{
+  "mcpServers": {
+    "airtable-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp/mcp-remote", 
+        "http://your-server-url:3000/mcp",
+        "--header",
+        "Authorization: Bearer your_mcp_auth_token",
+        "--header",
+        "x-airtable-api-key: your_airtable_api_key"
+      ]
+    }
+  }
+}
+```
+
+**Note**: When using both headers, the Authorization header will be used for MCP server authentication, and the x-airtable-api-key header will be used for Airtable API authentication.
 
 ### Multiple Headers
 
@@ -84,28 +109,6 @@ You can pass both the API key and base ID via headers:
 }
 ```
 
-### With MCP Authentication
-
-If your MCP server requires authentication (recommended for production), add the MCP auth token:
-
-```json
-{
-  "mcpServers": {
-    "airtable-remote": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@mcp/mcp-remote", 
-        "http://your-server-url:3000/mcp",
-        "--header",
-        "Authorization: Bearer your_mcp_auth_token",
-        "--header",
-        "x-airtable-api-key: your_airtable_api_key"
-      ]
-    }
-  }
-}
-```
 
 ## Server Configuration
 

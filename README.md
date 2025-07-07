@@ -62,6 +62,27 @@ For connecting to a remote MCP server, you can pass the API key via headers:
 }
 ```
 
+With both MCP authentication and Airtable API key:
+
+```json
+{
+  "mcpServers": {
+    "airtable-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp/mcp-remote", 
+        "https://your-server.com/mcp",
+        "--header",
+        "Authorization: Bearer your_mcp_auth_token",
+        "--header",
+        "x-airtable-api-key: your_api_key_here"
+      ]
+    }
+  }
+}
+```
+
 See the [MCP Remote Setup Guide](docs/mcp-remote-setup.md) for detailed configuration options.
 
 ## Configuration
