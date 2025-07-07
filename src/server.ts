@@ -244,13 +244,13 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
         }
         
         try {
-          // Extract context from request
+          // Extract context from request headers
           const context = extractRequestContext(req);
           
-          // Merge context with args
+          // Merge context with args (args take precedence)
           const argsWithContext = {
-            ...args,
             ...context,
+            ...args,
           };
           
           const result = await handler(argsWithContext);
