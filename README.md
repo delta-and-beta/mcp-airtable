@@ -23,8 +23,9 @@ npm install mcp-airtable
 
 ### Using Claude Desktop
 
-Add the server to your Claude Desktop configuration:
+Add the server to your Claude Desktop configuration. You have two options:
 
+**Option 1: With Environment API Key** (traditional)
 ```json
 {
   "mcpServers": {
@@ -38,6 +39,20 @@ Add the server to your Claude Desktop configuration:
   }
 }
 ```
+
+**Option 2: Without Environment API Key** (provide per-request)
+```json
+{
+  "mcpServers": {
+    "airtable": {
+      "command": "npx",
+      "args": ["mcp-airtable"]
+    }
+  }
+}
+```
+
+See [Claude Desktop Configuration Guide](deploy/claude-desktop/README.md) for more options.
 
 ## Configuration
 
@@ -160,7 +175,22 @@ Example with per-request API key:
 
 - `upload_attachment` - Upload files for attachment fields
 
-## Examples
+## Quick Start with Claude
+
+### Using Environment API Key
+```
+"List all tables in my Airtable base"
+"Show me records from the Customers table"
+```
+
+### Using Per-Request API Key
+```
+"Using API key patXXXXXXXXXXXXXX and base appYYYYYYYYYYYYYY, list all tables"
+```
+
+See [Claude Prompts Examples](docs/examples/claude-prompts.md) for more usage patterns.
+
+## API Examples
 
 ### List all tables in a base
 
@@ -169,6 +199,18 @@ Example with per-request API key:
   "tool": "list_tables",
   "arguments": {
     "baseId": "appXXXXXXXXXXXXXX"
+  }
+}
+```
+
+### With per-request API key
+
+```json
+{
+  "tool": "list_tables",
+  "arguments": {
+    "baseId": "appXXXXXXXXXXXXXX",
+    "apiKey": "patYYYYYYYYYYYYYY"
   }
 }
 ```
