@@ -29,13 +29,6 @@ function getAirtableClient(apiKey?: string, baseId?: string): AirtableClient {
     throw new Error('Airtable API key is required. Provide it via apiKey parameter or set AIRTABLE_API_KEY environment variable.');
   }
   
-  console.log('[DEBUG] getAirtableClient:', {
-    providedApiKey: !!apiKey,
-    apiKeyLength: key.length,
-    usingEnvKey: !apiKey && !!config.AIRTABLE_API_KEY,
-    cacheHit: clientCache.has(key)
-  });
-  
   if (!clientCache.has(key)) {
     clientCache.set(key, new AirtableClient({
       apiKey: key,
@@ -69,7 +62,6 @@ async function withErrorHandling<T>(
   try {
     return await operation();
   } catch (error: unknown) {
-    console.error('[ERROR] Operation failed:', error);
     if (error instanceof Error) {
       // Check for Airtable-specific errors
       if ('statusCode' in error) {
@@ -139,14 +131,7 @@ export const toolHandlers = {
   },
 
   get_records: async (args: unknown) => {
-    console.log('[DEBUG] get_records args:', JSON.stringify(args, null, 2));
     const validated = validateInput(GetRecordsSchema, args);
-    console.log('[DEBUG] validated args:', { 
-      hasApiKey: !!validated.airtableApiKey,
-      apiKeyLength: validated.airtableApiKey?.length,
-      tableName: validated.tableName,
-      baseId: validated.baseId 
-    });
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
