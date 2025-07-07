@@ -600,6 +600,42 @@ export const toolHandlers: Record<string, ToolHandler> = {
     });
   },
 
+  update_table: async (args: {
+    tableIdOrName: string;
+    name?: string;
+    description?: string;
+    baseId?: string;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
+  }) => {
+    // Check base access
+    const baseId = args.baseId || args.airtableBaseId;
+    if (baseId) {
+      enforceBaseAccess(baseId);
+    }
+    
+    // Check table access
+    enforceTableAccess(args.tableIdOrName);
+    
+    // If updating name, check if new name is allowed
+    if (args.name) {
+      enforceTableAccess(args.name);
+    }
+    
+    const client = getClient();
+    
+    return client.updateTable(
+      args.tableIdOrName,
+      {
+        name: args.name,
+        description: args.description,
+      },
+      {
+        baseId: args.baseId,
+      }
+    );
+  },
+
   list_views: async (args: { tableName: string; baseId?: string; airtableApiKey?: string; airtableBaseId?: string }) => {
     // Check base access if baseId provided
     if (args.baseId) {
