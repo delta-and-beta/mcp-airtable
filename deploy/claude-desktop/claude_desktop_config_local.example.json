@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mcp-airtable-local": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "cwd": "/path/to/mcp-airtable",
+      "env": {
+        "AIRTABLE_API_KEY": "patXXXXXXXXXXXXXX",
+        "AIRTABLE_BASE_ID": "appXXXXXXXXXXXXXX"
+      }
+    }
+  }
+}
