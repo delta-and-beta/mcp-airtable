@@ -1,7 +1,7 @@
 import { AirtableClient } from '../airtable/client.js';
 import { S3StorageClient } from '../s3/client.js';
 import { config } from '../config/index.js';
-import { airtableRateLimiter } from '../utils/rate-limiter.js';
+import { airtableRateLimiter } from '../utils/rate-limiter-redis.js';
 import { AirtableError } from '../utils/errors.js';
 import {
   validateInput,
@@ -73,7 +73,7 @@ async function withErrorHandling<T>(
 export const toolHandlers = {
   list_bases: async (args: unknown) => {
     validateInput(ListBasesSchema, args);
-    await airtableRateLimiter.acquire();
+    await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
       return await getAirtableClient().listBases();
@@ -82,7 +82,7 @@ export const toolHandlers = {
 
   list_tables: async (args: unknown) => {
     const { baseId } = validateInput(ListTablesSchema, args);
-    await airtableRateLimiter.acquire();
+    await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
       return await getAirtableClient().listTables(baseId);
@@ -91,7 +91,7 @@ export const toolHandlers = {
 
   get_records: async (args: unknown) => {
     const validated = validateInput(GetRecordsSchema, args);
-    await airtableRateLimiter.acquire();
+    await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
       return await getAirtableClient().getRecords(validated.tableName, {
@@ -107,7 +107,7 @@ export const toolHandlers = {
 
   create_record: async (args: unknown) => {
     const { tableName, fields, baseId, typecast } = validateInput(CreateRecordSchema, args);
-    await airtableRateLimiter.acquire();
+    await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
       return await getAirtableClient().createRecord(
@@ -120,7 +120,7 @@ export const toolHandlers = {
 
   update_record: async (args: unknown) => {
     const { tableName, recordId, fields, baseId, typecast } = validateInput(UpdateRecordSchema, args);
-    await airtableRateLimiter.acquire();
+    await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
       return await getAirtableClient().updateRecord(
@@ -134,7 +134,7 @@ export const toolHandlers = {
 
   delete_record: async (args: unknown) => {
     const { tableName, recordId, baseId } = validateInput(DeleteRecordSchema, args);
-    await airtableRateLimiter.acquire();
+    await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
       return await getAirtableClient().deleteRecord(
@@ -147,7 +147,7 @@ export const toolHandlers = {
 
   get_schema: async (args: unknown) => {
     const { baseId } = validateInput(GetSchemaSchema, args);
-    await airtableRateLimiter.acquire();
+    await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
       return await getAirtableClient().getSchema(baseId);
@@ -227,7 +227,7 @@ export const toolHandlers = {
       }
       
       for (const _chunk of chunks) {
-        await airtableRateLimiter.acquire();
+        await airtableRateLimiter.acquire('global');
       }
 
       // Perform batch upsert

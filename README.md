@@ -5,7 +5,7 @@ A Model Context Protocol (MCP) server that provides seamless integration with Ai
 ## Features
 
 - 🔧 **Full CRUD Operations**: Create, read, update, and delete records
-- 📊 **Schema Inspection**: Explore base and table structures
+- 📊 **Schema Inspection**: Explore base and table structures (Enterprise plan required)
 - 🔍 **Advanced Filtering**: Use Airtable formulas for complex queries
 - 📎 **Attachment Support**: Upload files to S3 or Google Cloud Storage
 - 🔐 **Secure Authentication**: Token-based API authentication
@@ -47,9 +47,11 @@ The server is configured through environment variables. Create a `.env` file in 
 # Required
 AIRTABLE_API_KEY=your_airtable_api_key
 
+# Required for production
+MCP_AUTH_TOKEN=your_secure_auth_token
+
 # Optional
 AIRTABLE_BASE_ID=default_base_id
-MCP_AUTH_TOKEN=your_auth_token
 PORT=3000
 NODE_ENV=production
 
@@ -64,7 +66,7 @@ GCS_BUCKET=your-bucket-name
 GCS_PROJECT_ID=your-project-id
 GCS_KEY_FILE=/path/to/keyfile.json
 
-# Access Control (Optional)
+# Access Control (Optional but recommended)
 ALLOWED_BASES=base1,base2
 ALLOWED_TABLES=table1,table2
 ACCESS_CONTROL_MODE=allowlist
@@ -76,17 +78,17 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=60
 
 ### Configuration Options
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AIRTABLE_API_KEY` | Your Airtable API key (required) | - |
-| `AIRTABLE_BASE_ID` | Default base ID for operations | - |
-| `PORT` | HTTP server port | 3000 |
-| `NODE_ENV` | Environment (development/production/test) | production |
-| `MCP_AUTH_TOKEN` | Bearer token for API authentication | - |
-| `CORS_ORIGIN` | CORS allowed origins | * |
-| `LOG_LEVEL` | Logging level (debug/info/warn/error) | info |
-| `RATE_LIMIT_ENABLED` | Enable rate limiting | true |
-| `RATE_LIMIT_REQUESTS_PER_MINUTE` | Max requests per minute | 60 |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `AIRTABLE_API_KEY` | Your Airtable API key | - | Yes |
+| `MCP_AUTH_TOKEN` | Bearer token for API authentication | - | Yes (production) |
+| `AIRTABLE_BASE_ID` | Default base ID for operations | - | No |
+| `PORT` | HTTP server port | 3000 | No |
+| `NODE_ENV` | Environment (development/production/test) | production | No |
+| `CORS_ORIGIN` | CORS allowed origins | * | No |
+| `LOG_LEVEL` | Logging level (debug/info/warn/error) | info | No |
+| `RATE_LIMIT_ENABLED` | Enable rate limiting | true | No |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | Max requests per minute | 60 | No |
 
 ## Usage
 
@@ -100,7 +102,7 @@ npm start
 
 ### Running as HTTP Server
 
-For remote deployments or integration with other services:
+For production deployments or remote access:
 
 ```bash
 npm run start:server
@@ -112,8 +114,8 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 
 ### Base Operations
 
-- `list_bases` - List all available Airtable bases
-- `get_schema` - Get the complete schema of a base
+- `list_bases` - List all available Airtable bases (Enterprise plan required)
+- `get_schema` - Get the complete schema of a base (Enterprise plan required)
 
 ### Table Operations
 
@@ -139,11 +141,14 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 
 ## Examples
 
-### List all bases
+### List all tables in a base
 
 ```json
 {
-  "tool": "list_bases"
+  "tool": "list_tables",
+  "arguments": {
+    "baseId": "appXXXXXXXXXXXXXX"
+  }
 }
 ```
 
@@ -200,7 +205,7 @@ Only allow access to specific items:
 
 ```bash
 ACCESS_CONTROL_MODE=allowlist
-ALLOWED_BASES=appProductionData,appPublicData
+ALLOWED_BASES=appXXXXXXXXXXXXXX,appYYYYYYYYYYYYYY
 ALLOWED_TABLES=Customers,Products,Orders
 ALLOWED_VIEWS=Public View,Customer Facing
 ```
@@ -211,7 +216,7 @@ Block access to specific items:
 ```bash
 ACCESS_CONTROL_MODE=blocklist
 BLOCKED_TABLES=Passwords,PersonalInfo,Salaries
-BLOCKED_BASES=appSensitiveHR
+BLOCKED_BASES=appSensitiveData
 ```
 
 ### Both Mode
@@ -241,6 +246,16 @@ src/
 │   └── storage/      # S3/GCS clients
 └── utils/            # Shared utilities
 ```
+
+## Security Best Practices
+
+1. **Authentication**: Always set `MCP_AUTH_TOKEN` in production
+2. **API Keys**: Use Airtable Personal Access Tokens with minimal required scopes
+3. **Access Control**: Configure allowed/blocked lists for bases and tables
+4. **Rate Limiting**: Enable to prevent API abuse
+5. **CORS**: Configure appropriate origins for your use case
+6. **Environment Variables**: Never commit secrets to version control
+7. **HTTPS**: Always use HTTPS in production deployments
 
 ## Development
 
@@ -278,14 +293,6 @@ npm test
 npm run test:coverage
 ```
 
-## Security Considerations
-
-1. **API Keys**: Never commit API keys to version control
-2. **Authentication**: Use `MCP_AUTH_TOKEN` in production environments
-3. **Access Control**: Configure allowed/blocked bases and tables
-4. **Rate Limiting**: Enable to prevent API abuse
-5. **CORS**: Configure appropriate origins for your use case
-
 ## Deployment
 
 ### Docker
@@ -304,6 +311,18 @@ CMD ["node", "dist/server.js"]
 
 For production deployments, ensure all sensitive configuration is provided through environment variables or a secure configuration management system.
 
+## Airtable Plan Limitations
+
+Some features require specific Airtable plans:
+
+- **Enterprise Plan Required**:
+  - `list_bases` - List all bases
+  - `get_schema` - Get base schema via Metadata API
+
+- **All Plans**:
+  - All other operations (CRUD, filtering, etc.)
+  - Rate limit: 5 requests/second per base
+
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
@@ -317,7 +336,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 📚 [Documentation](https://github.com/your-org/mcp-airtable/wiki)
 - 🐛 [Issue Tracker](https://github.com/your-org/mcp-airtable/issues)
 - 💬 [Discussions](https://github.com/your-org/mcp-airtable/discussions)
-
-## Acknowledgments
-
-Built with the [Model Context Protocol SDK](https://github.com/anthropics/model-context-protocol) by Anthropic.

@@ -63,6 +63,7 @@ src/
 - Use environment variables for configuration
 - Implement rate limiting for production
 - Follow principle of least privilege for access control
+- Authentication is mandatory in production
 
 ## Common Commands
 
@@ -135,11 +136,11 @@ try {
 
 ## Things to Avoid
 
-1. **No SSE Transport**: SSE is deprecated, use HTTP transport only
-2. **No Client-Specific Code**: Keep implementation generic
-3. **No Hardcoded Values**: Use environment variables
-4. **No Direct Console Logs**: Use the logger utility
-5. **No Synchronous File Operations**: Use async/await
+1. **No Hardcoded Values**: Use environment variables
+2. **No Direct Console Logs**: Use the logger utility
+3. **No Synchronous File Operations**: Use async/await
+4. **No Unauthenticated Production Access**: Always require MCP_AUTH_TOKEN
+5. **No Sensitive Data in Errors**: Sanitize error messages
 
 ## Debugging Tips
 
@@ -155,3 +156,13 @@ try {
 - Implement caching for frequently accessed data
 - Monitor Airtable API rate limits
 - Use queued client for bulk operations
+
+## Security Checklist
+
+- [ ] MCP_AUTH_TOKEN is required in production
+- [ ] All inputs are validated with Zod
+- [ ] No secrets in logs or error messages
+- [ ] Access control lists are configured
+- [ ] Rate limiting is enabled
+- [ ] CORS is properly configured
+- [ ] Dependencies are up to date

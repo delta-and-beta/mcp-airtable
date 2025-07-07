@@ -12,6 +12,7 @@ import { logger, requestLogger } from './utils/logger.js';
 import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
 import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
+import { rateLimitMiddleware } from './utils/rate-limiter-redis.js';
 
 // Load environment variables
 // Only load .env file in development
@@ -22,11 +23,45 @@ validateConfig();
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: config.CORS_ORIGIN || '*',
+// Security headers middleware
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Content-Security-Policy', "default-src 'self'");
+  next();
+});
+
+// CORS configuration
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like Postman or server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // In production, use strict CORS
+    if (config.NODE_ENV === 'production') {
+      const allowedOrigins = config.CORS_ORIGIN?.split(',').map(o => o.trim()) || [];
+      if (allowedOrigins.length === 0 || allowedOrigins.includes('*')) {
+        // If no specific origins configured, deny all in production
+        return callback(new Error('CORS not configured for production'));
+      }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    }
+    
+    // In development, allow all
+    callback(null, true);
+  },
   credentials: true,
-}));
+  maxAge: 86400, // 24 hours
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(requestLogger);
 
@@ -52,10 +87,15 @@ app.get('/health', async (_req, res) => {
 
 // Authentication middleware
 const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // In production, authentication is mandatory
+  if (config.NODE_ENV === 'production' && !config.MCP_AUTH_TOKEN) {
+    logger.error('MCP_AUTH_TOKEN must be set in production');
+    res.status(500).json(formatErrorResponse(new Error('Server configuration error')));
+    return;
+  }
+
+  // Skip authentication in development if no token is set
   if (!config.MCP_AUTH_TOKEN) {
-    if (config.NODE_ENV === 'production') {
-      logger.warn('Authentication token not configured in production');
-    }
     next();
     return;
   }
@@ -81,6 +121,7 @@ const authenticate = (req: express.Request, res: express.Response, next: express
     ip: req.ip,
     hasAuthHeader: !!authHeader,
     hasMcpToken: !!mcpToken,
+    path: req.path,
   });
   res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid or missing authentication')));
 };
@@ -145,7 +186,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 // MCP Protocol endpoint
-app.post('/mcp', authenticate, async (req, res) => {
+app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
   const message = req.body;
   
   logger.debug('MCP request', { 
