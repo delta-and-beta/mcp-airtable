@@ -636,6 +636,74 @@ export const toolHandlers: Record<string, ToolHandler> = {
     );
   },
 
+  create_field: async (args: {
+    tableIdOrName: string;
+    name: string;
+    type: string;
+    description?: string;
+    options?: Record<string, any>;
+    baseId?: string;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
+  }) => {
+    // Check base access
+    const baseId = args.baseId || args.airtableBaseId;
+    if (baseId) {
+      enforceBaseAccess(baseId);
+    }
+    
+    // Check table access
+    enforceTableAccess(args.tableIdOrName);
+    
+    const client = getClient(args.airtableApiKey, args.airtableBaseId);
+    
+    return client.createField(
+      args.tableIdOrName,
+      {
+        name: args.name,
+        type: args.type,
+        description: args.description,
+        options: args.options,
+      },
+      {
+        baseId: args.baseId,
+      }
+    );
+  },
+
+  update_field: async (args: {
+    tableIdOrName: string;
+    fieldIdOrName: string;
+    name?: string;
+    description?: string;
+    baseId?: string;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
+  }) => {
+    // Check base access
+    const baseId = args.baseId || args.airtableBaseId;
+    if (baseId) {
+      enforceBaseAccess(baseId);
+    }
+    
+    // Check table access
+    enforceTableAccess(args.tableIdOrName);
+    
+    const client = getClient(args.airtableApiKey, args.airtableBaseId);
+    
+    return client.updateField(
+      args.tableIdOrName,
+      args.fieldIdOrName,
+      {
+        name: args.name,
+        description: args.description,
+      },
+      {
+        baseId: args.baseId,
+      }
+    );
+  },
+
   list_views: async (args: { tableName: string; baseId?: string; airtableApiKey?: string; airtableBaseId?: string }) => {
     // Check base access if baseId provided
     if (args.baseId) {

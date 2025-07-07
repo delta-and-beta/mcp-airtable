@@ -175,6 +175,11 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 - `update_table` - Update table properties (name or description)
 - `list_views` - List all views in a table
 
+### Field Operations
+
+- `create_field` - Add a new field to an existing table
+- `update_field` - Update field properties (name or description)
+
 ### Record Operations
 
 - `get_records` - Retrieve records with filtering and sorting
@@ -292,6 +297,41 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
     "tableIdOrName": "Projects",
     "name": "Active Projects",
     "description": "Track all active project progress"
+  }
+}
+```
+
+### Create a field
+
+```json
+{
+  "tool": "create_field",
+  "arguments": {
+    "tableIdOrName": "Projects",
+    "name": "Priority",
+    "type": "singleSelect",
+    "description": "Project priority level",
+    "options": {
+      "choices": [
+        { "name": "Low", "color": "grayBright" },
+        { "name": "Medium", "color": "yellowBright" },
+        { "name": "High", "color": "redBright" }
+      ]
+    }
+  }
+}
+```
+
+### Update a field
+
+```json
+{
+  "tool": "update_field",
+  "arguments": {
+    "tableIdOrName": "Projects",
+    "fieldIdOrName": "Priority",
+    "name": "Priority Level",
+    "description": "Updated project priority level"
   }
 }
 ```

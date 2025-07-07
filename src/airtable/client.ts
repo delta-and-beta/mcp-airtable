@@ -455,4 +455,132 @@ export class AirtableClient {
 
     return response.json();
   }
+
+  async createField(
+    tableIdOrName: string,
+    field: {
+      name: string;
+      type: string;
+      description?: string;
+      options?: Record<string, any>;
+    },
+    options: {
+      baseId?: string;
+    } = {}
+  ) {
+    const baseId = options.baseId || this.defaultBaseId;
+    if (!baseId) {
+      throw new Error('Base ID is required for creating fields');
+    }
+
+    // First, get the table ID if a name was provided
+    let tableId = tableIdOrName;
+    if (!tableIdOrName.startsWith('tbl')) {
+      // If it doesn't look like a table ID, try to find it by name
+      const tablesResponse = await this.listTables(baseId) as any;
+      const table = tablesResponse.tables?.find((t: any) => t.name === tableIdOrName);
+      if (!table) {
+        throw new Error(`Table '${tableIdOrName}' not found`);
+      }
+      tableId = table.id;
+    }
+
+    const response = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${baseId}/tables/${tableId}/fields`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: field.name,
+          type: field.type,
+          description: field.description,
+          options: field.options,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to create field: ${response.statusText} - ${error}`);
+    }
+
+    return response.json();
+  }
+
+  async updateField(
+    tableIdOrName: string,
+    fieldIdOrName: string,
+    updates: {
+      name?: string;
+      description?: string;
+    },
+    options: {
+      baseId?: string;
+    } = {}
+  ) {
+    const baseId = options.baseId || this.defaultBaseId;
+    if (!baseId) {
+      throw new Error('Base ID is required for updating fields');
+    }
+
+    // First, get the table ID if a name was provided
+    let tableId = tableIdOrName;
+    if (!tableIdOrName.startsWith('tbl')) {
+      const tablesResponse = await this.listTables(baseId) as any;
+      const table = tablesResponse.tables?.find((t: any) => t.name === tableIdOrName);
+      if (!table) {
+        throw new Error(`Table '${tableIdOrName}' not found`);
+      }
+      tableId = table.id;
+    }
+
+    // Get the field ID if a name was provided
+    let fieldId = fieldIdOrName;
+    if (!fieldIdOrName.startsWith('fld')) {
+      // Need to get table schema to find field by name
+      const schemaResponse = await fetch(
+        `https://api.airtable.com/v0/meta/bases/${baseId}/tables`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+        }
+      );
+      
+      if (!schemaResponse.ok) {
+        throw new Error(`Failed to get table schema: ${schemaResponse.statusText}`);
+      }
+      
+      const schemaData = await schemaResponse.json() as any;
+      const tableSchema = schemaData.tables?.find((t: any) => t.id === tableId);
+      const field = tableSchema?.fields?.find((f: any) => f.name === fieldIdOrName);
+      
+      if (!field) {
+        throw new Error(`Field '${fieldIdOrName}' not found in table`);
+      }
+      fieldId = field.id;
+    }
+
+    const response = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${baseId}/tables/${tableId}/fields/${fieldId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to update field: ${response.statusText} - ${error}`);
+    }
+
+    return response.json();
+  }
 }
