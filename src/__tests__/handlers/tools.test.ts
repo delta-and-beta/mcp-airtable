@@ -18,7 +18,7 @@ jest.mock('../../airtable/client');
 jest.mock('../../s3/client');
 jest.mock('../../gcs/client');
 jest.mock('../../airtable/queued-client');
-jest.mock('../../utils/enhanced-rate-limiter', () => ({
+jest.mock('../../utils/rate-limiter-redis', () => ({
   airtableRateLimiter: {
     executeWithRetry: jest.fn((fn) => fn()),
   },
