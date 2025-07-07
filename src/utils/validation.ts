@@ -152,7 +152,9 @@ const FieldTypeSchema = z.enum([
   'aiText'
 ]);
 
-export const CreateTableSchema = ApiKeySchema.extend({
+export const CreateTableSchema = z.object({
+  airtableApiKey: z.string().optional(),
+  airtableBaseId: z.string().optional(),
   name: TableNameSchema,
   description: z.string().optional(),
   fields: z.array(z.object({

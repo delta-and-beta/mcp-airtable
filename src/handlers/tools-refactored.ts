@@ -100,7 +100,7 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient().createTable(
+      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).createTable(
         validated.name,
         validated.fields,
         {
