@@ -4,12 +4,11 @@
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-proxy",
-        "http://your-server-url:3000/mcp"
-      ],
-      "env": {
-        "MCP_AUTH_TOKEN": "your_auth_token_here"
-      }
+        "@mcp/mcp-remote",
+        "http://your-server-url:3000/mcp",
+        "--header",
+        "x-airtable-api-key: your_airtable_api_key_here"
+      ]
     }
   }
 }

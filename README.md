@@ -23,9 +23,10 @@ npm install mcp-airtable
 
 ### Using Claude Desktop
 
-Add the server to your Claude Desktop configuration. You have two options:
+#### Local Installation
 
-**Option 1: With Environment API Key** (traditional)
+Add the server to your Claude Desktop configuration:
+
 ```json
 {
   "mcpServers": {
@@ -40,26 +41,56 @@ Add the server to your Claude Desktop configuration. You have two options:
 }
 ```
 
-**Option 2: Without Environment API Key** (provide per-request)
+#### Remote Server (mcp-remote)
+
+For connecting to a remote MCP server, you can pass the API key via headers:
+
 ```json
 {
   "mcpServers": {
-    "airtable": {
+    "airtable-remote": {
       "command": "npx",
-      "args": ["mcp-airtable"]
+      "args": [
+        "-y",
+        "@mcp/mcp-remote", 
+        "https://your-server.com/mcp",
+        "--header",
+        "x-airtable-api-key: your_api_key_here"
+      ]
     }
   }
 }
 ```
 
-See [Claude Desktop Configuration Guide](deploy/claude-desktop/README.md) for more options.
+With both MCP authentication and Airtable API key:
+
+```json
+{
+  "mcpServers": {
+    "airtable-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mcp/mcp-remote", 
+        "https://your-server.com/mcp",
+        "--header",
+        "Authorization: Bearer your_mcp_auth_token",
+        "--header",
+        "x-airtable-api-key: your_api_key_here"
+      ]
+    }
+  }
+}
+```
+
+See the [MCP Remote Setup Guide](docs/mcp-remote-setup.md) for detailed configuration options.
 
 ## Configuration
 
 The server is configured through environment variables. Create a `.env` file in your project root:
 
 ```bash
-# Optional - can be provided per-request
+# Optional - Can be provided via request headers or tool arguments
 AIRTABLE_API_KEY=your_airtable_api_key
 
 # Required for production
@@ -95,7 +126,7 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=60
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `AIRTABLE_API_KEY` | Your Airtable API key (can be provided per-request) | - | No |
+| `AIRTABLE_API_KEY` | Your Airtable API key (can also be passed via headers) | - | No* |
 | `MCP_AUTH_TOKEN` | Bearer token for API authentication | - | Yes (production) |
 | `AIRTABLE_BASE_ID` | Default base ID for operations | - | No |
 | `PORT` | HTTP server port | 3000 | No |
@@ -104,6 +135,11 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=60
 | `LOG_LEVEL` | Logging level (debug/info/warn/error) | info | No |
 | `RATE_LIMIT_ENABLED` | Enable rate limiting | true | No |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | Max requests per minute | 60 | No |
+
+\* The Airtable API key can be provided in three ways (in order of precedence):
+1. As a tool argument: `{ "airtableApiKey": "your_key" }`
+2. Via HTTP headers: `x-airtable-api-key` or `Authorization: Bearer pat...` (case-insensitive)
+3. As an environment variable: `AIRTABLE_API_KEY`
 
 ## Usage
 
@@ -124,27 +160,6 @@ npm run start:server
 ```
 
 The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
-
-### API Key Authentication
-
-The Airtable API key can be provided in multiple ways:
-
-1. **Environment Variable** (default): Set `AIRTABLE_API_KEY` in your environment
-2. **Request Headers**: Include in HTTP requests
-   - `X-Airtable-Api-Key: your_api_key`
-   - `Authorization: Bearer your_api_key`
-3. **Request Parameters**: Pass `apiKey` in the tool arguments
-
-Example with per-request API key:
-```json
-{
-  "tool": "list_tables",
-  "arguments": {
-    "baseId": "appXXXXXXXXXXXXXX",
-    "apiKey": "patXXXXXXXXXXXXXX"
-  }
-}
-```
 
 ## Available Tools
 
@@ -176,22 +191,7 @@ Example with per-request API key:
 
 - `upload_attachment` - Upload files for attachment fields
 
-## Quick Start with Claude
-
-### Using Environment API Key
-```
-"List all tables in my Airtable base"
-"Show me records from the Customers table"
-```
-
-### Using Per-Request API Key
-```
-"Using API key patXXXXXXXXXXXXXX and base appYYYYYYYYYYYYYY, list all tables"
-```
-
-See [Claude Prompts Examples](docs/examples/claude-prompts.md) for more usage patterns.
-
-## API Examples
+## Examples
 
 ### List all tables in a base
 
@@ -200,18 +200,6 @@ See [Claude Prompts Examples](docs/examples/claude-prompts.md) for more usage pa
   "tool": "list_tables",
   "arguments": {
     "baseId": "appXXXXXXXXXXXXXX"
-  }
-}
-```
-
-### With per-request API key
-
-```json
-{
-  "tool": "list_tables",
-  "arguments": {
-    "baseId": "appXXXXXXXXXXXXXX",
-    "apiKey": "patYYYYYYYYYYYYYY"
   }
 }
 ```
