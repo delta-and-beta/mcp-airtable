@@ -29,6 +29,13 @@ function getAirtableClient(apiKey?: string, baseId?: string): AirtableClient {
     throw new Error('Airtable API key is required. Provide it via apiKey parameter or set AIRTABLE_API_KEY environment variable.');
   }
   
+  console.log('[DEBUG] getAirtableClient:', {
+    providedApiKey: !!apiKey,
+    apiKeyLength: key.length,
+    usingEnvKey: !apiKey && !!config.AIRTABLE_API_KEY,
+    cacheHit: clientCache.has(key)
+  });
+  
   if (!clientCache.has(key)) {
     clientCache.set(key, new AirtableClient({
       apiKey: key,
