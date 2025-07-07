@@ -91,6 +91,33 @@ export const toolDefinitions: Tool[] = [
     },
   },
   {
+    name: 'update_table',
+    description: 'Update table properties (name or description)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tableIdOrName: {
+          type: 'string',
+          description: 'The ID or name of the table to update',
+        },
+        name: {
+          type: 'string',
+          description: 'New name for the table (optional)',
+        },
+        description: {
+          type: 'string',
+          description: 'New description for the table (optional)',
+        },
+        baseId: {
+          type: 'string',
+          description: 'The ID of the base (optional if default base is set)',
+        },
+      },
+      required: ['tableIdOrName'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'list_views',
     description: 'List all views in a table',
     inputSchema: {
