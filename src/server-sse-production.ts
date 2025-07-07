@@ -119,8 +119,10 @@ app.get('/mcp', authenticate, async (req, res) => {
     // Override the start method to add our custom headers
     const originalStart = transport.start.bind(transport);
     transport.start = async () => {
-      // Add custom headers before SSE transport sets its headers
+      // Add custom headers to disable buffering and compression
       res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+      res.setHeader('Content-Encoding', 'identity'); // Disable compression
+      res.removeHeader('Content-Length'); // Remove content length for streaming
       await originalStart();
       // Send initial comment after headers are set
       res.write(':ok\n\n');
@@ -396,8 +398,10 @@ app.get('/mcp/n8n/:token', async (req, res) => {
     // Override the start method to add our custom headers
     const originalStart = transport.start.bind(transport);
     transport.start = async () => {
-      // Add custom headers before SSE transport sets its headers
+      // Add custom headers to disable buffering and compression
       res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+      res.setHeader('Content-Encoding', 'identity'); // Disable compression
+      res.removeHeader('Content-Length'); // Remove content length for streaming
       await originalStart();
       // Send initial comment after headers are set
       res.write(':ok\n\n');

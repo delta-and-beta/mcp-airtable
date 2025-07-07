@@ -170,6 +170,9 @@ Add the following to your Claude Desktop configuration file:
    # Airtable
    AIRTABLE_API_KEY=your-airtable-api-key
    AIRTABLE_BASE_ID=your-default-base-id  # Optional
+   
+   # Note: PORT is automatically set by Zeabur (usually 8080)
+   # The server will use process.env.PORT || 3000
    ```
 
    **Storage (Optional - for attachments):**
