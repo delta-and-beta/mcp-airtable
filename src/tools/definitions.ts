@@ -118,6 +118,83 @@ export const toolDefinitions: Tool[] = [
     },
   },
   {
+    name: 'create_field',
+    description: 'Create a new field in a table',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tableIdOrName: {
+          type: 'string',
+          description: 'The ID or name of the table',
+        },
+        name: {
+          type: 'string',
+          description: 'Name of the field to create',
+        },
+        type: {
+          type: 'string',
+          description: 'Field type',
+          enum: [
+            'singleLineText', 'email', 'url', 'multilineText', 'number', 
+            'percent', 'currency', 'singleSelect', 'multipleSelects',
+            'singleCollaborator', 'multipleCollaborators', 'multipleRecordLinks',
+            'date', 'dateTime', 'phoneNumber', 'multipleAttachments', 'checkbox',
+            'formula', 'createdTime', 'rollup', 'count', 'lookup',
+            'multipleLookupValues', 'autoNumber', 'barcode', 'rating',
+            'richText', 'duration', 'lastModifiedTime', 'button',
+            'createdBy', 'lastModifiedBy', 'externalSyncSource', 'aiText'
+          ],
+        },
+        description: {
+          type: 'string',
+          description: 'Description of the field (optional)',
+        },
+        options: {
+          type: 'object',
+          description: 'Field-specific options',
+          additionalProperties: true,
+        },
+        baseId: {
+          type: 'string',
+          description: 'The ID of the base (optional if default base is set)',
+        },
+      },
+      required: ['tableIdOrName', 'name', 'type'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_field',
+    description: 'Update field properties (name or description)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tableIdOrName: {
+          type: 'string',
+          description: 'The ID or name of the table',
+        },
+        fieldIdOrName: {
+          type: 'string',
+          description: 'The ID or name of the field to update',
+        },
+        name: {
+          type: 'string',
+          description: 'New name for the field (optional)',
+        },
+        description: {
+          type: 'string',
+          description: 'New description for the field (optional)',
+        },
+        baseId: {
+          type: 'string',
+          description: 'The ID of the base (optional if default base is set)',
+        },
+      },
+      required: ['tableIdOrName', 'fieldIdOrName'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'list_views',
     description: 'List all views in a table',
     inputSchema: {
