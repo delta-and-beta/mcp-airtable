@@ -19,6 +19,9 @@ export function extractRequestContext(req: Request): RequestContext {
     }
   }
   
+  // Debug logging - log all headers
+  console.log('[DEBUG] All request headers:', Object.keys(headers));
+  
   // Debug logging
   if (headers['x-airtable-api-key'] || headers['authorization']) {
     console.log('[DEBUG] Found auth headers:', {
@@ -33,9 +36,14 @@ export function extractRequestContext(req: Request): RequestContext {
   
   if (apiKeyHeader) {
     context.airtableApiKey = apiKeyHeader;
-  } else if (authHeader && authHeader.toLowerCase().startsWith('bearer pat')) {
-    // Extract Airtable PAT from Authorization header
-    context.airtableApiKey = authHeader.substring(7); // Remove "Bearer "
+    console.log('[DEBUG] Found Airtable API key in x-airtable-api-key header');
+  } else if (authHeader && authHeader.toLowerCase().includes('pat')) {
+    // Check if this is an Airtable PAT (not MCP auth token)
+    const bearerToken = authHeader.replace(/^bearer\s+/i, '');
+    if (bearerToken.startsWith('pat')) {
+      context.airtableApiKey = bearerToken;
+      console.log('[DEBUG] Found Airtable PAT in Authorization header');
+    }
   }
   
   // Check for base ID in headers (case-insensitive)
