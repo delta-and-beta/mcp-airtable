@@ -73,10 +73,16 @@ This prevents the AI from accessing sensitive data. See [Access Control Guide](d
    - `data.records:write`
    - `schema.bases:read`
 
-## Usage
+## Server Modes
+
+This MCP server supports two transport modes:
+
+1. **stdio mode** (default) - For local Claude Desktop integration
+2. **SSE mode** - For remote deployments (HTTP with Server-Sent Events)
 
 ### Running the Server
 
+#### stdio Mode (Local)
 For development with hot reload:
 ```bash
 npm run dev
@@ -86,6 +92,21 @@ For production:
 ```bash
 npm start
 ```
+
+#### SSE Mode (Remote/HTTP)
+For development with hot reload:
+```bash
+npm run dev:sse
+```
+
+For production:
+```bash
+npm run start:sse
+```
+
+The SSE server runs on HTTP (default port 3000) and provides:
+- `/health` - Health check endpoint
+- `/mcp` - MCP SSE endpoint (requires authentication if configured)
 
 ### Using with Claude Desktop
 
@@ -115,7 +136,9 @@ Add the following to your Claude Desktop configuration file:
 }
 ```
 
-#### Option 2: Remote Deployment (Zeabur)
+#### Option 2: Remote Deployment (Zeabur/SSE)
+
+**Note:** Remote deployments use SSE (Server-Sent Events) mode, not stdio mode.
 
 ##### Required Zeabur Services
 

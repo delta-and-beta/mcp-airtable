@@ -39,23 +39,45 @@ npm run lint
 
 ## Architecture
 
+### Server Modes
+
+This MCP server supports two transport modes:
+
+1. **stdio mode** (`src/index.ts`) - For local Claude Desktop integration
+   - Direct process communication via standard I/O
+   - Used when Claude Desktop spawns the server as a subprocess
+   - Default mode for local development
+
+2. **SSE mode** (`src/server-sse-production.ts`) - For remote deployments
+   - HTTP server with Server-Sent Events transport
+   - Used for cloud deployments (Zeabur, Railway, etc.)
+   - Supports authentication and CORS
+   - Provides `/health` and `/mcp` endpoints
+
 ### Expected Structure
 
 ```
 mcp-airtable/
 ├── src/
-│   ├── index.ts          # MCP server entry point
-│   ├── server.ts         # MCP server implementation
-│   ├── handlers/         # MCP protocol handlers
-│   │   ├── tools.ts      # Tool definitions (CRUD operations)
-│   │   └── resources.ts  # Resource providers
-│   ├── airtable/         # Airtable API integration
-│   │   ├── client.ts     # Airtable client wrapper
-│   │   └── types.ts      # TypeScript types for Airtable data
-│   └── utils/            # Utility functions
+│   ├── index.ts                    # stdio server entry point (local)
+│   ├── server-sse-production.ts    # SSE server entry point (remote)
+│   ├── handlers/                   # MCP protocol handlers
+│   │   ├── tools.ts               # Tool definitions (CRUD operations)
+│   │   └── tools-refactored.ts    # Refactored handlers for SSE mode
+│   ├── airtable/                  # Airtable API integration
+│   │   ├── client.ts              # Airtable client wrapper
+│   │   ├── queued-client.ts       # Rate-limited batch operations
+│   │   └── types.ts               # TypeScript types for Airtable data
+│   ├── s3/                        # S3 storage integration
+│   ├── gcs/                       # Google Cloud Storage integration
+│   └── utils/                     # Utility functions
+├── deploy/                        # Deployment configurations
+│   ├── zeabur/                    # Zeabur-specific (uses SSE mode)
+│   ├── railway/                   # Railway-specific (uses SSE mode)
+│   └── claude-desktop/            # Local Claude Desktop (uses stdio mode)
 ├── package.json
 ├── tsconfig.json
-├── .env.example          # Environment variables template
+├── .env.example                   # Environment variables template
 └── README.md
 ```
 
@@ -201,10 +223,18 @@ cd deploy/<platform>
 ./deploy.sh
 
 # Or use platform-specific commands
-zeabur deploy      # For Zeabur
-railway up         # For Railway
-docker compose up  # For Docker
+zeabur deploy      # For Zeabur (uses SSE mode)
+railway up         # For Railway (uses SSE mode)
+docker compose up  # For Docker (configurable)
 ```
+
+### Mode Selection by Deployment
+
+- **Local/Claude Desktop**: Uses stdio mode (`index.ts`)
+- **Zeabur**: Uses SSE mode (`server-sse-production.ts`) 
+- **Railway**: Uses SSE mode (`server-sse-production.ts`)
+- **Docker**: Configurable via CMD in Dockerfile
+- **Generic Remote**: Typically uses SSE mode for HTTP access
 
 ### Important Notes
 
@@ -212,6 +242,7 @@ docker compose up  # For Docker
 - **DO NOT** cherry-pick commits between deployment branches
 - **NEVER** commit directly to main (except hotfixes)
 - **ALWAYS** work on feature branches from develop
+- **ALL** code changes must go through develop branch first
 - Deployment branches sync automatically from main (production) only
 - Deployment-specific files in `/deploy/` directories are preserved during syncs
 - Use `DEPLOYMENT_NAME` environment variable to load platform-specific configs at runtime
