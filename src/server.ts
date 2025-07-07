@@ -229,6 +229,8 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
 
       case 'tools/call':
         const { name, arguments: args } = message.params;
+        logger.debug('tools/call request', { tool: name, hasArgs: !!args });
+        
         const handler = toolHandlers[name as keyof typeof toolHandlers];
         
         if (!handler) {
@@ -259,6 +261,12 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
             ...args,
           };
           
+          logger.debug('Calling handler with merged args', { 
+            tool: name,
+            hasApiKey: !!argsWithContext.airtableApiKey,
+            argsKeys: Object.keys(argsWithContext)
+          });
+          
           const result = await handler(argsWithContext);
           const sanitizedResult = prepareResponse(result);
           res.json({
@@ -274,7 +282,11 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
             }
           });
         } catch (error: unknown) {
+          logger.error('Handler error', error as Error, { tool: name });
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          const errorStack = error instanceof Error ? error.stack : undefined;
+          console.error('[ERROR] Tool handler failed:', { tool: name, error: errorMessage, stack: errorStack });
+          
           res.json({
             jsonrpc: '2.0',
             id: message.id,
