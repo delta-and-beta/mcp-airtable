@@ -298,13 +298,14 @@ app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
               ],
             }
           });
-        } catch (error) {
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           res.json({
             jsonrpc: '2.0',
             id: message.id,
             error: {
               code: -32603,
-              message: error instanceof Error ? error.message : 'Unknown error',
+              message: errorMessage,
             }
           });
         }
@@ -326,12 +327,13 @@ app.post('/mcp/n8n/:token', express.json(), async (req, res) => {
         result: {}
       });
     }
-  } catch (error) {
-    logger.error('n8n POST request error', error as Error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('n8n POST request error', error instanceof Error ? error : new Error(errorMessage));
     res.status(500).json({
       error: {
         code: -32603,
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: errorMessage,
       }
     });
   }
