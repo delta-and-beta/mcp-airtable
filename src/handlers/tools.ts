@@ -119,6 +119,95 @@ export const toolDefinitions: Tool[] = [
     },
   },
   {
+    name: 'create_table',
+    description: 'Create a new table in a base',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name of the table to create',
+        },
+        description: {
+          type: 'string',
+          description: 'Description of the table (optional)',
+        },
+        fields: {
+          type: 'array',
+          description: 'Fields to create in the table',
+          items: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Name of the field',
+              },
+              type: {
+                type: 'string',
+                description: 'Field type (e.g., singleLineText, number, singleSelect, etc.)',
+                enum: [
+                  'singleLineText', 'email', 'url', 'multilineText', 'number', 
+                  'percent', 'currency', 'singleSelect', 'multipleSelects',
+                  'singleCollaborator', 'multipleCollaborators', 'multipleRecordLinks',
+                  'date', 'dateTime', 'phoneNumber', 'multipleAttachments', 'checkbox',
+                  'formula', 'createdTime', 'rollup', 'count', 'lookup',
+                  'multipleLookupValues', 'autoNumber', 'barcode', 'rating',
+                  'richText', 'duration', 'lastModifiedTime', 'button',
+                  'createdBy', 'lastModifiedBy', 'externalSyncSource', 'aiText'
+                ],
+              },
+              description: {
+                type: 'string',
+                description: 'Description of the field (optional)',
+              },
+              options: {
+                type: 'object',
+                description: 'Field-specific options',
+                properties: {
+                  choices: {
+                    type: 'array',
+                    description: 'Choices for select fields',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        color: { type: 'string' },
+                      },
+                      required: ['name'],
+                    },
+                  },
+                  precision: {
+                    type: 'integer',
+                    description: 'Decimal places for number/currency fields (0-8)',
+                  },
+                  symbol: {
+                    type: 'string',
+                    description: 'Currency symbol',
+                  },
+                  linkedTableId: {
+                    type: 'string',
+                    description: 'ID of the linked table for linked record fields',
+                  },
+                  prefersSingleRecordLink: {
+                    type: 'boolean',
+                    description: 'Whether linked record field allows only one linked record',
+                  },
+                },
+              },
+            },
+            required: ['name', 'type'],
+          },
+          minItems: 1,
+        },
+        baseId: {
+          type: 'string',
+          description: 'The ID of the base (optional if default base is set)',
+        },
+      },
+      required: ['name', 'fields'],
+    },
+  },
+  {
     name: 'list_views',
     description: 'List all views in a table',
     inputSchema: {
@@ -479,6 +568,36 @@ export const toolHandlers: Record<string, ToolHandler> = {
       result.tables = filterTables(result.tables);
     }
     return result;
+  },
+
+  create_table: async (args: {
+    name: string;
+    description?: string;
+    fields: Array<{
+      name: string;
+      type: string;
+      description?: string;
+      options?: Record<string, any>;
+    }>;
+    baseId?: string;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
+  }) => {
+    // Check base access
+    const baseId = args.baseId || args.airtableBaseId;
+    if (baseId) {
+      enforceBaseAccess(baseId);
+    }
+    
+    // Check if table creation is allowed
+    enforceTableAccess(args.name); // This will check if the table name is allowed
+    
+    const client = getClient(args.airtableApiKey, args.airtableBaseId);
+    
+    return client.createTable(args.name, args.fields, {
+      baseId: args.baseId,
+      description: args.description,
+    });
   },
 
   list_views: async (args: { tableName: string; baseId?: string; airtableApiKey?: string; airtableBaseId?: string }) => {
