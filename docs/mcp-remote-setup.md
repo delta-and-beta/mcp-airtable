@@ -16,9 +16,9 @@ The MCP Airtable server supports extracting the Airtable API key from HTTP heade
 
 ### Supported Headers
 
-The server checks for the API key in these headers (in order):
+The server checks for the API key in these headers (in order, case-insensitive):
 
-1. `X-Airtable-Api-Key: your_api_key`
+1. `x-airtable-api-key: your_api_key` (recommended)
 2. `Authorization: Bearer pat...` (Airtable Personal Access Token)
 
 ### Claude Desktop Configuration
@@ -35,7 +35,7 @@ Configure your Claude Desktop to use mcp-remote with custom headers:
         "@mcp/mcp-remote", 
         "http://your-server-url:3000/mcp",
         "--header",
-        "X-Airtable-Api-Key: your_airtable_api_key_here"
+        "x-airtable-api-key: your_airtable_api_key_here"
       ]
     }
   }
@@ -75,9 +75,9 @@ You can pass both the API key and base ID via headers:
         "@mcp/mcp-remote", 
         "http://your-server-url:3000/mcp",
         "--header",
-        "X-Airtable-Api-Key: your_api_key_here",
+        "x-airtable-api-key: your_api_key_here",
         "--header", 
-        "X-Airtable-Base-Id: appXXXXXXXXXXXXXX"
+        "x-airtable-base-id: appXXXXXXXXXXXXXX"
       ]
     }
   }
@@ -100,7 +100,7 @@ If your MCP server requires authentication (recommended for production), add the
         "--header",
         "Authorization: Bearer your_mcp_auth_token",
         "--header",
-        "X-Airtable-Api-Key: your_airtable_api_key"
+        "x-airtable-api-key: your_airtable_api_key"
       ]
     }
   }
@@ -137,7 +137,7 @@ If you see "No Airtable API key provided" errors:
 ```bash
 curl -X POST http://your-server-url:3000/mcp \
   -H "Content-Type: application/json" \
-  -H "X-Airtable-Api-Key: your_api_key" \
+  -H "x-airtable-api-key: your_api_key" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
 
@@ -163,7 +163,7 @@ When deploying to platforms like Zeabur:
         "@mcp/mcp-remote",
         "https://your-mcp-server.zeabur.app/mcp",
         "--header",
-        "X-Airtable-Api-Key: patXXXXXXXXXXXXXXXX"
+        "x-airtable-api-key: patXXXXXXXXXXXXXXXX"
       ]
     }
   }
@@ -184,9 +184,9 @@ For accessing multiple bases with different API keys:
         "@mcp/mcp-remote",
         "https://mcp-server.example.com/mcp",
         "--header",
-        "X-Airtable-Api-Key: patPersonalXXXXXXXX",
+        "x-airtable-api-key: patPersonalXXXXXXXX",
         "--header",
-        "X-Airtable-Base-Id: appPersonalXXXXXX"
+        "x-airtable-base-id: appPersonalXXXXXX"
       ]
     },
     "airtable-work": {
@@ -196,9 +196,9 @@ For accessing multiple bases with different API keys:
         "@mcp/mcp-remote",
         "https://mcp-server.example.com/mcp",
         "--header",
-        "X-Airtable-Api-Key: patWorkXXXXXXXXXX",
+        "x-airtable-api-key: patWorkXXXXXXXXXX",
         "--header",
-        "X-Airtable-Base-Id: appWorkXXXXXXXXXX"
+        "x-airtable-base-id: appWorkXXXXXXXXXX"
       ]
     }
   }

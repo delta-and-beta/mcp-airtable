@@ -7,7 +7,7 @@
         "@mcp/mcp-remote",
         "http://your-server-url:3000/mcp",
         "--header",
-        "X-Airtable-Api-Key: your_airtable_api_key_here"
+        "x-airtable-api-key: your_airtable_api_key_here"
       ]
     }
   }

@@ -55,7 +55,7 @@ For connecting to a remote MCP server, you can pass the API key via headers:
         "@mcp/mcp-remote", 
         "https://your-server.com/mcp",
         "--header",
-        "X-Airtable-Api-Key: your_api_key_here"
+        "x-airtable-api-key: your_api_key_here"
       ]
     }
   }
@@ -117,7 +117,7 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=60
 
 \* The Airtable API key can be provided in three ways (in order of precedence):
 1. As a tool argument: `{ "airtableApiKey": "your_key" }`
-2. Via HTTP headers: `X-Airtable-Api-Key` or `Authorization: Bearer pat...`
+2. Via HTTP headers: `x-airtable-api-key` or `Authorization: Bearer pat...` (case-insensitive)
 3. As an environment variable: `AIRTABLE_API_KEY`
 
 ## Usage

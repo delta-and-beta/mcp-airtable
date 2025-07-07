@@ -11,9 +11,17 @@ export interface RequestContext {
 export function extractRequestContext(req: Request): RequestContext {
   const context: RequestContext = {};
   
-  // Check for API key in various header formats
-  const apiKeyHeader = req.headers['x-airtable-api-key'] as string;
-  const authHeader = req.headers['authorization'] as string;
+  // Convert all header keys to lowercase for case-insensitive lookup
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (typeof value === 'string') {
+      headers[key.toLowerCase()] = value;
+    }
+  }
+  
+  // Check for API key in various header formats (case-insensitive)
+  const apiKeyHeader = headers['x-airtable-api-key'];
+  const authHeader = headers['authorization'];
   
   if (apiKeyHeader) {
     context.airtableApiKey = apiKeyHeader;
@@ -22,8 +30,8 @@ export function extractRequestContext(req: Request): RequestContext {
     context.airtableApiKey = authHeader.substring(7); // Remove "Bearer "
   }
   
-  // Check for base ID in headers
-  const baseIdHeader = req.headers['x-airtable-base-id'] as string;
+  // Check for base ID in headers (case-insensitive)
+  const baseIdHeader = headers['x-airtable-base-id'];
   if (baseIdHeader) {
     context.airtableBaseId = baseIdHeader;
   }

@@ -50,7 +50,7 @@ To connect to a remote MCP server, use mcp-remote with header-based authenticati
         "@mcp/mcp-remote",
         "https://your-server.com/mcp",
         "--header",
-        "X-Airtable-Api-Key: your_airtable_api_key"
+        "x-airtable-api-key: your_airtable_api_key"
       ]
     }
   }
@@ -71,7 +71,7 @@ Or with both MCP authentication and Airtable API key:
         "--header",
         "Authorization: Bearer your_mcp_auth_token",
         "--header",
-        "X-Airtable-Api-Key: your_airtable_api_key"
+        "x-airtable-api-key: your_airtable_api_key"
       ]
     }
   }
@@ -86,15 +86,15 @@ Replace `https://your-server.com/mcp` with your actual server endpoint.
 #### Authentication
 You can pass authentication tokens via headers:
 - `Authorization: Bearer <token>` - For MCP server authentication
-- `X-Airtable-Api-Key: <key>` - For Airtable API authentication
-- `X-Airtable-Base-Id: <id>` - Optional default base ID
+- `x-airtable-api-key: <key>` - For Airtable API authentication (case-insensitive)
+- `x-airtable-base-id: <id>` - Optional default base ID (case-insensitive)
 
 #### Header Options
 The server supports multiple ways to pass the Airtable API key:
 
-1. **X-Airtable-Api-Key header**:
+1. **x-airtable-api-key header** (recommended):
    ```json
-   "--header", "X-Airtable-Api-Key: patXXXXXXXXXXXXXX"
+   "--header", "x-airtable-api-key: patXXXXXXXXXXXXXX"
    ```
 
 2. **Authorization header with PAT**:
@@ -105,8 +105,8 @@ The server supports multiple ways to pass the Airtable API key:
 3. **Multiple headers**:
    ```json
    "--header", "Authorization: Bearer mcp_auth_token",
-   "--header", "X-Airtable-Api-Key: your_airtable_key",
-   "--header", "X-Airtable-Base-Id: appXXXXXXXXXXXXXX"
+   "--header", "x-airtable-api-key: your_airtable_key",
+   "--header", "x-airtable-base-id: appXXXXXXXXXXXXXX"
    ```
 
 ## Environment Variables
@@ -164,7 +164,7 @@ You can configure additional options through environment variables:
         "@mcp/mcp-remote",
         "http://localhost:3000/mcp",
         "--header",
-        "X-Airtable-Api-Key: your_dev_api_key"
+        "x-airtable-api-key: your_dev_api_key"
       ]
     }
   }
@@ -184,7 +184,7 @@ You can configure additional options through environment variables:
         "--header",
         "Authorization: Bearer prod_mcp_token",
         "--header",
-        "X-Airtable-Api-Key: prod_airtable_key"
+        "x-airtable-api-key: prod_airtable_key"
       ]
     }
   }
@@ -202,9 +202,9 @@ You can configure additional options through environment variables:
         "@mcp/mcp-remote",
         "https://mcp.example.com/mcp",
         "--header",
-        "X-Airtable-Api-Key: personal_api_key",
+        "x-airtable-api-key: personal_api_key",
         "--header",
-        "X-Airtable-Base-Id: appPersonalBase"
+        "x-airtable-base-id: appPersonalBase"
       ]
     },
     "airtable-work": {
@@ -214,9 +214,9 @@ You can configure additional options through environment variables:
         "@mcp/mcp-remote",
         "https://mcp.example.com/mcp",
         "--header",
-        "X-Airtable-Api-Key: work_api_key",
+        "x-airtable-api-key: work_api_key",
         "--header",
-        "X-Airtable-Base-Id: appWorkBase"
+        "x-airtable-base-id: appWorkBase"
       ]
     }
   }
