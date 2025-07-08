@@ -759,6 +759,29 @@ export const toolHandlers: Record<string, ToolHandler> = {
     });
   },
 
+  get_record: async (args: {
+    tableName: string;
+    recordId: string;
+    baseId?: string;
+    airtableApiKey?: string;
+    airtableBaseId?: string;
+  }) => {
+    // Check access control
+    const baseId = args.baseId || args.airtableBaseId;
+    if (baseId) {
+      enforceBaseAccess(baseId);
+    }
+    enforceTableAccess(args.tableName);
+    
+    return getClient(args.airtableApiKey, args.airtableBaseId).getRecord(
+      args.tableName,
+      args.recordId,
+      {
+        baseId: args.baseId,
+      }
+    );
+  },
+
   create_record: async (args: {
     tableName: string;
     fields: Record<string, any>;

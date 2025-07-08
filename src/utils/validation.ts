@@ -39,6 +39,12 @@ export const GetRecordsSchema = ApiKeySchema.extend({
   fields: z.array(z.string()).optional(),
 });
 
+export const GetRecordSchema = ApiKeySchema.extend({
+  tableName: TableNameSchema,
+  recordId: RecordIdSchema,
+  baseId: BaseIdSchema.optional(),
+});
+
 export const CreateRecordSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   fields: z.record(z.unknown()),
