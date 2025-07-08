@@ -592,7 +592,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     // Check if table creation is allowed
     enforceTableAccess(args.name); // This will check if the table name is allowed
     
-    const client = getClient();
+    const client = getClient(args.airtableApiKey, args.airtableBaseId);
     
     return client.createTable(args.name, args.fields, {
       baseId: args.baseId,
@@ -622,7 +622,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       enforceTableAccess(args.name);
     }
     
-    const client = getClient();
+    const client = getClient(args.airtableApiKey, args.airtableBaseId);
     
     return client.updateTable(
       args.tableIdOrName,
