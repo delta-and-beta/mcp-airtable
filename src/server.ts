@@ -128,37 +128,27 @@ const authenticate = (req: express.Request, res: express.Response, next: express
 };
 
 /**
- * Map error types to appropriate JSON-RPC error codes
+ * Get error code from error object (uses HTTP status codes)
  */
-function getJsonRpcErrorCode(error: unknown): number {
-  // Check for specific error types
+function getErrorCode(error: unknown): number {
   if (error instanceof ValidationError) {
-    return -32602; // Invalid params
+    return 400; // Bad Request
   }
   
   if (error instanceof AuthenticationError) {
-    return -32000; // Server error: Unauthorized
+    return 401; // Unauthorized
   }
   
   if (error instanceof RateLimitError) {
-    return -32003; // Server error: Rate limited
+    return 429; // Too Many Requests
   }
   
-  if (error instanceof AirtableError) {
-    // Map based on HTTP status code
-    switch (error.statusCode) {
-      case 400: return -32602; // Invalid params
-      case 401: return -32000; // Unauthorized
-      case 403: return -32001; // Forbidden
-      case 404: return -32002; // Not found
-      case 422: return -32602; // Invalid params (unprocessable entity)
-      case 429: return -32003; // Rate limited
-      default: return -32603; // Internal error
-    }
+  if (error instanceof AirtableError && error.statusCode) {
+    return error.statusCode;
   }
   
-  // Default to internal error
-  return -32603;
+  // Default to internal server error
+  return 500;
 }
 
 // Create MCP server instance
@@ -309,7 +299,7 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
             jsonrpc: '2.0',
             id: message.id,
             error: {
-              code: getJsonRpcErrorCode(error),
+              code: getErrorCode(error),
               message: errorMessage,
             }
           });
@@ -353,7 +343,7 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
       jsonrpc: '2.0',
       id: message.id,
       error: {
-        code: getJsonRpcErrorCode(error),
+        code: getErrorCode(error),
         message: errorMessage,
       }
     });
