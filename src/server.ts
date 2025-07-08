@@ -9,7 +9,7 @@ import {
 import { config as loadEnv } from 'dotenv';
 import { validateConfig, config } from './config/index.js';
 import { logger, requestLogger } from './utils/logger.js';
-import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
+import { formatErrorResponse, AuthenticationError, AirtableError, ValidationError, RateLimitError } from './utils/errors.js';
 import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 import { rateLimitMiddleware } from './utils/rate-limiter-redis.js';
@@ -126,6 +126,40 @@ const authenticate = (req: express.Request, res: express.Response, next: express
   });
   res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid or missing authentication')));
 };
+
+/**
+ * Map error types to appropriate JSON-RPC error codes
+ */
+function getJsonRpcErrorCode(error: unknown): number {
+  // Check for specific error types
+  if (error instanceof ValidationError) {
+    return -32602; // Invalid params
+  }
+  
+  if (error instanceof AuthenticationError) {
+    return -32000; // Server error: Unauthorized
+  }
+  
+  if (error instanceof RateLimitError) {
+    return -32003; // Server error: Rate limited
+  }
+  
+  if (error instanceof AirtableError) {
+    // Map based on HTTP status code
+    switch (error.statusCode) {
+      case 400: return -32602; // Invalid params
+      case 401: return -32000; // Unauthorized
+      case 403: return -32001; // Forbidden
+      case 404: return -32002; // Not found
+      case 422: return -32602; // Invalid params (unprocessable entity)
+      case 429: return -32003; // Rate limited
+      default: return -32603; // Internal error
+    }
+  }
+  
+  // Default to internal error
+  return -32603;
+}
 
 // Create MCP server instance
 const mcpServer = new Server(
@@ -275,7 +309,7 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
             jsonrpc: '2.0',
             id: message.id,
             error: {
-              code: -32603,
+              code: getJsonRpcErrorCode(error),
               message: errorMessage,
             }
           });
@@ -319,7 +353,7 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
       jsonrpc: '2.0',
       id: message.id,
       error: {
-        code: -32603,
+        code: getJsonRpcErrorCode(error),
         message: errorMessage,
       }
     });
