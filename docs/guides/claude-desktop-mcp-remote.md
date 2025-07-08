@@ -153,7 +153,11 @@ MCP_AUTH_TOKEN=your_secure_token_here
 
 ### Custom Headers
 
-If your server requires additional headers:
+You can configure default behavior and additional headers:
+
+#### Default Typecast Option
+
+Enable automatic type conversion for all operations:
 
 ```json
 {
@@ -163,7 +167,30 @@ If your server requires additional headers:
       "args": ["-y", "mcp-remote@latest", "connect", "https://api.example.com/mcp"],
       "env": {
         "MCP_AUTH_TOKEN": "your_token",
-        "MCP_REMOTE_HEADERS": "{\"X-Custom-Header\": \"value\", \"X-API-Version\": \"2\"}"
+        "MCP_REMOTE_HEADERS": "{\"X-Airtable-Option-Typecast\": \"true\"}"
+      }
+    }
+  }
+}
+```
+
+With this configuration:
+- String values like "100" will automatically convert to numbers
+- "true"/"false" strings will convert to booleans  
+- Date strings will convert to proper date formats
+- Can be overridden per-request by specifying `typecast: false` in your prompt
+
+#### Multiple Custom Headers
+
+```json
+{
+  "mcpServers": {
+    "airtable-remote": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "connect", "https://api.example.com/mcp"],
+      "env": {
+        "MCP_AUTH_TOKEN": "your_token",
+        "MCP_REMOTE_HEADERS": "{\"X-Custom-Header\": \"value\", \"X-API-Version\": \"2\", \"X-Airtable-Option-Typecast\": \"true\"}"
       }
     }
   }

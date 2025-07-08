@@ -9,7 +9,7 @@ import {
 import { config as loadEnv } from 'dotenv';
 import { validateConfig, config } from './config/index.js';
 import { logger, requestLogger } from './utils/logger.js';
-import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
+import { formatErrorResponse, AuthenticationError, AirtableError, ValidationError, RateLimitError } from './utils/errors.js';
 import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 import { rateLimitMiddleware } from './utils/rate-limiter-redis.js';
@@ -126,6 +126,61 @@ const authenticate = (req: express.Request, res: express.Response, next: express
   });
   res.status(401).json(formatErrorResponse(new AuthenticationError('Invalid or missing authentication')));
 };
+
+/**
+ * Get error code from error object (uses HTTP status codes)
+ */
+function getErrorCode(error: unknown): number {
+  if (error instanceof ValidationError) {
+    return 400; // Bad Request
+  }
+  
+  if (error instanceof AuthenticationError) {
+    return 401; // Unauthorized
+  }
+  
+  if (error instanceof RateLimitError) {
+    return 429; // Too Many Requests
+  }
+  
+  if (error instanceof AirtableError && error.statusCode) {
+    return error.statusCode;
+  }
+  
+  // Default to internal server error
+  return 500;
+}
+
+/**
+ * Get HTTP status description
+ */
+function getStatusDescription(code: number): string {
+  const statusDescriptions: Record<number, string> = {
+    400: 'Bad Request',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'Not Found',
+    409: 'Conflict',
+    422: 'Unprocessable Entity',
+    429: 'Too Many Requests',
+    500: 'Internal Server Error',
+    502: 'Bad Gateway',
+    503: 'Service Unavailable',
+  };
+  
+  return statusDescriptions[code] || `Error ${code}`;
+}
+
+/**
+ * Format error message with status description
+ */
+function formatErrorMessage(error: unknown): string {
+  const baseMessage = error instanceof Error ? error.message : 'Unknown error';
+  const errorCode = getErrorCode(error);
+  const statusDesc = getStatusDescription(errorCode);
+  
+  return `[${statusDesc}] ${baseMessage}`;
+}
 
 // Create MCP server instance
 const mcpServer = new Server(
@@ -269,14 +324,13 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
           });
         } catch (error: unknown) {
           logger.error('Handler error', error as Error, { tool: name });
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           
           res.json({
             jsonrpc: '2.0',
             id: message.id,
             error: {
-              code: -32603,
-              message: errorMessage,
+              code: getErrorCode(error),
+              message: formatErrorMessage(error),
             }
           });
         }
@@ -313,14 +367,13 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
         });
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('MCP request error', error instanceof Error ? error : new Error(errorMessage));
+    logger.error('MCP request error', error instanceof Error ? error : new Error('Unknown error'));
     res.status(500).json({
       jsonrpc: '2.0',
       id: message.id,
       error: {
-        code: -32603,
-        message: errorMessage,
+        code: getErrorCode(error),
+        message: formatErrorMessage(error),
       }
     });
   }
