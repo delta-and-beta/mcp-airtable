@@ -12,6 +12,7 @@ A Model Context Protocol (MCP) server that provides seamless integration with Ai
 - ⚡ **Rate Limiting**: Configurable request throttling
 - 🚀 **Batch Operations**: Efficient bulk record operations
 - 🛡️ **Access Control**: Fine-grained permissions for bases and tables
+- 🔄 **Automatic Type Conversion**: Configurable typecast option for seamless data handling
 
 ## Installation
 
@@ -140,6 +141,23 @@ RATE_LIMIT_REQUESTS_PER_MINUTE=60
 1. As a tool argument: `{ "airtableApiKey": "your_key" }`
 2. Via HTTP headers: `x-airtable-api-key` or `Authorization: Bearer pat...` (case-insensitive)
 3. As an environment variable: `AIRTABLE_API_KEY`
+
+### Request Headers
+
+The server supports the following HTTP headers for per-request configuration:
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `x-airtable-api-key` | Airtable API key for this request | `patXXXXXXXXXXXXXX` |
+| `x-airtable-base-id` | Base ID for this request | `appYYYYYYYYYYYYYY` |
+| `x-airtable-option-typecast` | Enable automatic type conversion | `true`, `false`, `1`, `0` |
+
+The typecast option automatically converts string values to their appropriate field types:
+- `"100"` → `100` (number)
+- `"true"` → `true` (boolean)
+- `"2024-01-01"` → Date object
+
+This can be set as a default via headers and overridden per-operation in tool arguments.
 
 ## Usage
 

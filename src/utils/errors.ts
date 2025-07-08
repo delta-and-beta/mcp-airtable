@@ -33,49 +33,56 @@ export class ConfigurationError extends Error {
   }
 }
 
+const statusDescriptions: Record<number, string> = {
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  409: 'Conflict',
+  422: 'Unprocessable Entity',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+  502: 'Bad Gateway',
+  503: 'Service Unavailable',
+};
+
+function getStatusDescription(code: number): string {
+  return statusDescriptions[code] || `Error ${code}`;
+}
+
 export function formatErrorResponse(error: Error): {
   error: string;
   details?: any;
   statusCode?: number;
 } {
+  let statusCode: number;
+  let message = error.message;
+  let details: any;
+
   if (error instanceof ValidationError) {
-    return {
-      error: error.message,
-      details: error.details,
-    };
+    statusCode = 400;
+    details = error.details;
+  } else if (error instanceof AirtableError) {
+    statusCode = error.statusCode || 500;
+    details = error.details;
+  } else if (error instanceof RateLimitError) {
+    statusCode = 429;
+  } else if (error instanceof AuthenticationError) {
+    statusCode = 401;
+  } else if (error instanceof ConfigurationError) {
+    statusCode = 500;
+  } else {
+    statusCode = 500;
+    message = error.message || 'Internal server error';
   }
-  
-  if (error instanceof AirtableError) {
-    return {
-      error: error.message,
-      statusCode: error.statusCode,
-      details: error.details,
-    };
-  }
-  
-  if (error instanceof RateLimitError) {
-    return {
-      error: error.message,
-      statusCode: 429,
-    };
-  }
-  
-  if (error instanceof AuthenticationError) {
-    return {
-      error: error.message,
-      statusCode: 401,
-    };
-  }
-  
-  if (error instanceof ConfigurationError) {
-    return {
-      error: error.message,
-      statusCode: 500,
-    };
-  }
-  
+
+  // Prefix message with status description
+  const statusDesc = getStatusDescription(statusCode);
+  const formattedMessage = `[${statusDesc}] ${message}`;
+
   return {
-    error: error.message || 'Internal server error',
-    statusCode: 500,
+    error: formattedMessage,
+    statusCode,
+    ...(details && { details }),
   };
 }

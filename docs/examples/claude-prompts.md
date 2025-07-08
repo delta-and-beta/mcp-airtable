@@ -171,6 +171,36 @@ Create an 'Invoices' table with:
 - Last Modified (last modified time field)"
 ```
 
+## Using Typecast Option
+
+The typecast option automatically converts values to match field types (e.g., string "100" to number 100). You can enable it:
+
+### In Individual Operations
+
+```
+"Using API key patXXXXXXXXXXXXXX and base appYYYYYYYYYYYYYY:
+
+Create a record in the Products table with typecast enabled:
+- Name: Widget
+- Price: '99.99' (will be converted to number)
+- InStock: 'true' (will be converted to boolean)
+- Quantity: '50' (will be converted to number)"
+```
+
+### With Batch Operations
+
+```
+"API Key: patXXXXXXXXXXXXXX
+Base: appYYYYYYYYYYYYYY
+
+Import these CSV-style records into the Inventory table with typecast=true:
+1. SKU-001, '100', '29.99', 'true'
+2. SKU-002, '50', '49.99', 'false'
+3. SKU-003, '75', '39.99', 'true'
+
+The string values should be automatically converted to numbers and booleans."
+```
+
 ## Schema Operations (Enterprise)
 
 ```
