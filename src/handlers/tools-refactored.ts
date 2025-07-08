@@ -8,6 +8,7 @@ import {
   ListBasesSchema,
   ListTablesSchema,
   GetRecordsSchema,
+  GetRecordSchema,
   CreateRecordSchema,
   UpdateRecordSchema,
   DeleteRecordSchema,
@@ -184,6 +185,19 @@ export const toolHandlers = {
         sort: validated.sort,
         fields: validated.fields,
       });
+    });
+  },
+
+  get_record: async (args: unknown) => {
+    const validated = validateInput(GetRecordSchema, args);
+    await airtableRateLimiter.acquire('global');
+    
+    return withErrorHandling(async () => {
+      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).getRecord(
+        validated.tableName,
+        validated.recordId,
+        { baseId: validated.baseId }
+      );
     });
   },
 
