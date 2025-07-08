@@ -151,13 +151,14 @@ The server supports the following HTTP headers for per-request configuration:
 | `x-airtable-api-key` | Airtable API key for this request | `patXXXXXXXXXXXXXX` |
 | `x-airtable-base-id` | Base ID for this request | `appYYYYYYYYYYYYYY` |
 | `x-airtable-option-typecast` | Enable automatic type conversion | `true`, `false`, `1`, `0` |
+| `x-airtable-option-max-records` | Default max records limit for queries | `100`, `500`, `1000` |
 
 The typecast option automatically converts string values to their appropriate field types:
 - `"100"` → `100` (number)
 - `"true"` → `true` (boolean)
 - `"2024-01-01"` → Date object
 
-This can be set as a default via headers and overridden per-operation in tool arguments.
+The max-records option sets a default limit for `get_records` queries to prevent accidentally fetching large datasets. This header value is overridden by explicit `maxRecords` in tool arguments.
 
 ## Usage
 

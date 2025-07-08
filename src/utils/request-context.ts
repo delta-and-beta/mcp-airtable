@@ -4,6 +4,7 @@ export interface RequestContext {
   airtableApiKey?: string;
   airtableBaseId?: string;
   typecast?: boolean;
+  maxRecords?: number;
 }
 
 /**
@@ -46,6 +47,15 @@ export function extractRequestContext(req: Request): RequestContext {
     // Accept various boolean representations
     const value = typecastHeader.toLowerCase();
     context.typecast = value === 'true' || value === '1' || value === 'yes';
+  }
+  
+  // Check for max records option in headers (case-insensitive)
+  const maxRecordsHeader = headers['x-airtable-option-max-records'];
+  if (maxRecordsHeader !== undefined) {
+    const value = parseInt(maxRecordsHeader);
+    if (!isNaN(value) && value > 0) {
+      context.maxRecords = value;
+    }
   }
   
   return context;
