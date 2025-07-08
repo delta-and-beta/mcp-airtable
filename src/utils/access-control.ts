@@ -4,6 +4,7 @@
 
 import { config } from './config.js';
 import { logger } from './logger.js';
+import { AuthenticationError } from './errors.js';
 
 interface AccessControlConfig {
   allowedBases: string[];
@@ -170,7 +171,7 @@ export function filterViews(views: Array<{ id: string; name: string }>): Array<{
  */
 export function enforceBaseAccess(baseId: string): void {
   if (!isBaseAllowed(baseId)) {
-    throw new Error(`Access denied: Base '${baseId}' is not allowed`);
+    throw new AuthenticationError(`Access denied: Base '${baseId}' is not allowed`);
   }
 }
 
@@ -179,7 +180,7 @@ export function enforceBaseAccess(baseId: string): void {
  */
 export function enforceTableAccess(tableName: string, tableId?: string): void {
   if (!isTableAllowed(tableName, tableId)) {
-    throw new Error(`Access denied: Table '${tableName}' is not allowed`);
+    throw new AuthenticationError(`Access denied: Table '${tableName}' is not allowed`);
   }
 }
 
@@ -188,7 +189,7 @@ export function enforceTableAccess(tableName: string, tableId?: string): void {
  */
 export function enforceViewAccess(viewName: string, viewId?: string): void {
   if (!isViewAllowed(viewName, viewId)) {
-    throw new Error(`Access denied: View '${viewName}' is not allowed`);
+    throw new AuthenticationError(`Access denied: View '${viewName}' is not allowed`);
   }
 }
 

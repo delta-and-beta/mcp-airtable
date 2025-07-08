@@ -1,5 +1,6 @@
 import Airtable from 'airtable';
 import type { FieldSet } from 'airtable';
+import { AirtableError } from '../utils/errors.js';
 
 export interface AirtableConfig {
   apiKey: string;
@@ -29,6 +30,60 @@ export class AirtableClient {
     return this.airtable.base(id);
   }
 
+  private async parseApiError(response: Response, operation: string): Promise<never> {
+    let errorDetails: any = {};
+    let errorMessage = `${operation} failed: ${response.statusText}`;
+    
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        errorDetails = await response.json();
+        
+        // Airtable API error format
+        if (errorDetails.error) {
+          if (typeof errorDetails.error === 'string') {
+            errorMessage = errorDetails.error;
+          } else if (errorDetails.error.message) {
+            errorMessage = errorDetails.error.message;
+          } else if (errorDetails.error.type) {
+            errorMessage = `${errorDetails.error.type}: ${errorDetails.error.message || response.statusText}`;
+          }
+        } else if (errorDetails.message) {
+          errorMessage = errorDetails.message;
+        }
+      } else {
+        const text = await response.text();
+        if (text) {
+          errorMessage = `${operation} failed: ${text}`;
+        }
+      }
+    } catch (e) {
+      // If we can't parse the error, use the original message
+    }
+    
+    throw new AirtableError(errorMessage, response.status, errorDetails);
+  }
+
+  private wrapSdkError(error: any, operation: string): never {
+    // Check if it's an Airtable SDK error
+    if (error.error) {
+      const message = error.error.message || error.error.type || error.message || `${operation} failed`;
+      throw new AirtableError(message, error.statusCode || error.status, error.error);
+    }
+    
+    // If it's already an AirtableError, rethrow it
+    if (error instanceof AirtableError) {
+      throw error;
+    }
+    
+    // Otherwise, wrap it
+    throw new AirtableError(
+      error.message || `${operation} failed`,
+      error.statusCode || error.status,
+      error
+    );
+  }
+
   async listBases() {
     const response = await fetch('https://api.airtable.com/v0/meta/bases', {
       headers: {
@@ -37,7 +92,7 @@ export class AirtableClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to list bases: ${response.statusText}`);
+      await this.parseApiError(response, 'List bases');
     }
 
     return response.json();
@@ -54,7 +109,7 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to list tables: ${response.statusText}`);
+      await this.parseApiError(response, 'List tables');
     }
 
     return response.json();
@@ -72,7 +127,7 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to get table information: ${response.statusText}`);
+      await this.parseApiError(response, 'Get table information');
     }
 
     const data: any = await response.json();
@@ -118,12 +173,16 @@ export class AirtableClient {
     if (options.sort) selectOptions.sort = options.sort;
     if (options.fields) selectOptions.fields = options.fields;
 
-    const records = await table.select(selectOptions).all();
-    return records.map((record) => ({
-      id: record.id,
-      fields: record.fields,
-      createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
-    }));
+    try {
+      const records = await table.select(selectOptions).all();
+      return records.map((record) => ({
+        id: record.id,
+        fields: record.fields,
+        createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+      }));
+    } catch (error) {
+      this.wrapSdkError(error, 'List records');
+    }
   }
 
   async createRecord(
@@ -139,12 +198,16 @@ export class AirtableClient {
       createOptions.typecast = options.typecast;
     }
 
-    const record = await table.create(fields, createOptions);
-    return {
-      id: record.id,
-      fields: record.fields,
-      createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
-    };
+    try {
+      const record = await table.create(fields, createOptions);
+      return {
+        id: record.id,
+        fields: record.fields,
+        createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+      };
+    } catch (error) {
+      this.wrapSdkError(error, 'Create record');
+    }
   }
 
   async updateRecord(
@@ -161,12 +224,16 @@ export class AirtableClient {
       updateOptions.typecast = options.typecast;
     }
 
-    const record = await table.update(recordId, fields, updateOptions);
-    return {
-      id: record.id,
-      fields: record.fields,
-      createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
-    };
+    try {
+      const record = await table.update(recordId, fields, updateOptions);
+      return {
+        id: record.id,
+        fields: record.fields,
+        createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+      };
+    } catch (error) {
+      this.wrapSdkError(error, 'Update record');
+    }
   }
 
   async deleteRecord(
@@ -177,11 +244,15 @@ export class AirtableClient {
     const base = this.getBase(options.baseId);
     const table = base(tableName);
 
-    const record = await table.destroy(recordId);
-    return {
-      id: record.id,
-      deleted: true,
-    };
+    try {
+      const record = await table.destroy(recordId);
+      return {
+        id: record.id,
+        deleted: true,
+      };
+    } catch (error) {
+      this.wrapSdkError(error, 'Delete record');
+    }
   }
 
   async getSchema(baseId?: string) {
@@ -195,7 +266,7 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to get schema: ${response.statusText}`);
+      await this.parseApiError(response, 'Get schema');
     }
 
     return response.json();
@@ -225,17 +296,21 @@ export class AirtableClient {
 
     const results = [];
     for (const chunk of chunks) {
-      // For batch create, pass the array of records with fields
-      const createdRecords = await table.create(chunk, createOptions);
-      
-      // Ensure createdRecords is always an array
-      const recordsArray = Array.isArray(createdRecords) ? createdRecords : [createdRecords];
-      
-      results.push(...recordsArray.map(record => ({
-        id: record.id,
-        fields: record.fields,
-        createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
-      })));
+      try {
+        // For batch create, pass the array of records with fields
+        const createdRecords = await table.create(chunk, createOptions);
+        
+        // Ensure createdRecords is always an array
+        const recordsArray = Array.isArray(createdRecords) ? createdRecords : [createdRecords];
+        
+        results.push(...recordsArray.map(record => ({
+          id: record.id,
+          fields: record.fields,
+          createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+        })));
+      } catch (error) {
+        this.wrapSdkError(error, 'Batch create records');
+      }
     }
 
     return results;
@@ -265,17 +340,21 @@ export class AirtableClient {
 
     const results = [];
     for (const chunk of chunks) {
-      // For batch update, Airtable expects array of {id, fields} objects
-      const updatedRecords = await table.update(chunk, updateOptions);
-      
-      // Ensure updatedRecords is always an array
-      const recordsArray = Array.isArray(updatedRecords) ? updatedRecords : [updatedRecords];
-      
-      results.push(...recordsArray.map(record => ({
-        id: record.id,
-        fields: record.fields,
-        createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
-      })));
+      try {
+        // For batch update, Airtable expects array of {id, fields} objects
+        const updatedRecords = await table.update(chunk, updateOptions);
+        
+        // Ensure updatedRecords is always an array
+        const recordsArray = Array.isArray(updatedRecords) ? updatedRecords : [updatedRecords];
+        
+        results.push(...recordsArray.map(record => ({
+          id: record.id,
+          fields: record.fields,
+          createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+        })));
+      } catch (error) {
+        this.wrapSdkError(error, 'Batch update records');
+      }
     }
 
     return results;
@@ -311,20 +390,24 @@ export class AirtableClient {
 
     const results = [];
     for (const chunk of chunks) {
-      // For upsert, pass records with fields (SDK will handle the upsert logic)
-      const createdRecords = await table.create(
-        chunk.map(r => ({ fields: r.fields })),
-        createOptions
-      );
-      
-      // Ensure createdRecords is always an array
-      const recordsArray = Array.isArray(createdRecords) ? createdRecords : [createdRecords];
-      
-      results.push(...recordsArray.map(record => ({
-        id: record.id,
-        fields: record.fields,
-        createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
-      })));
+      try {
+        // For upsert, pass records with fields (SDK will handle the upsert logic)
+        const createdRecords = await table.create(
+          chunk.map(r => ({ fields: r.fields })),
+          createOptions
+        );
+        
+        // Ensure createdRecords is always an array
+        const recordsArray = Array.isArray(createdRecords) ? createdRecords : [createdRecords];
+        
+        results.push(...recordsArray.map(record => ({
+          id: record.id,
+          fields: record.fields,
+          createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+        })));
+      } catch (error) {
+        this.wrapSdkError(error, 'Batch upsert records');
+      }
     }
 
     return results;
@@ -348,15 +431,19 @@ export class AirtableClient {
 
     const results = [];
     for (const chunk of chunks) {
-      const deletedRecords = await table.destroy(chunk);
-      
-      // Ensure deletedRecords is always an array
-      const recordsArray = Array.isArray(deletedRecords) ? deletedRecords : [deletedRecords];
-      
-      results.push(...recordsArray.map(record => ({
-        id: record.id,
-        deleted: true,
-      })));
+      try {
+        const deletedRecords = await table.destroy(chunk);
+        
+        // Ensure deletedRecords is always an array
+        const recordsArray = Array.isArray(deletedRecords) ? deletedRecords : [deletedRecords];
+        
+        results.push(...recordsArray.map(record => ({
+          id: record.id,
+          deleted: true,
+        })));
+      } catch (error) {
+        this.wrapSdkError(error, 'Batch delete records');
+      }
     }
 
     return results;
@@ -402,8 +489,7 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to create table: ${response.statusText} - ${error}`);
+      await this.parseApiError(response, 'Create table');
     }
 
     return response.json();
@@ -449,8 +535,7 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to update table: ${response.statusText} - ${error}`);
+      await this.parseApiError(response, 'Update table');
     }
 
     return response.json();
@@ -503,8 +588,7 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to create field: ${response.statusText} - ${error}`);
+      await this.parseApiError(response, 'Create field');
     }
 
     return response.json();
@@ -551,7 +635,7 @@ export class AirtableClient {
       );
       
       if (!schemaResponse.ok) {
-        throw new Error(`Failed to get table schema: ${schemaResponse.statusText}`);
+        await this.parseApiError(schemaResponse, 'Get table schema for field update');
       }
       
       const schemaData = await schemaResponse.json() as any;
@@ -577,8 +661,7 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to update field: ${response.statusText} - ${error}`);
+      await this.parseApiError(response, 'Update field');
     }
 
     return response.json();
