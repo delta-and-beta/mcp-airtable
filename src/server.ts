@@ -151,6 +151,37 @@ function getErrorCode(error: unknown): number {
   return 500;
 }
 
+/**
+ * Get HTTP status description
+ */
+function getStatusDescription(code: number): string {
+  const statusDescriptions: Record<number, string> = {
+    400: 'Bad Request',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'Not Found',
+    409: 'Conflict',
+    422: 'Unprocessable Entity',
+    429: 'Too Many Requests',
+    500: 'Internal Server Error',
+    502: 'Bad Gateway',
+    503: 'Service Unavailable',
+  };
+  
+  return statusDescriptions[code] || `Error ${code}`;
+}
+
+/**
+ * Format error message with status description
+ */
+function formatErrorMessage(error: unknown): string {
+  const baseMessage = error instanceof Error ? error.message : 'Unknown error';
+  const errorCode = getErrorCode(error);
+  const statusDesc = getStatusDescription(errorCode);
+  
+  return `[${statusDesc}] ${baseMessage}`;
+}
+
 // Create MCP server instance
 const mcpServer = new Server(
   {
@@ -293,14 +324,13 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
           });
         } catch (error: unknown) {
           logger.error('Handler error', error as Error, { tool: name });
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           
           res.json({
             jsonrpc: '2.0',
             id: message.id,
             error: {
               code: getErrorCode(error),
-              message: errorMessage,
+              message: formatErrorMessage(error),
             }
           });
         }
@@ -337,14 +367,13 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
         });
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('MCP request error', error instanceof Error ? error : new Error(errorMessage));
+    logger.error('MCP request error', error instanceof Error ? error : new Error('Unknown error'));
     res.status(500).json({
       jsonrpc: '2.0',
       id: message.id,
       error: {
         code: getErrorCode(error),
-        message: errorMessage,
+        message: formatErrorMessage(error),
       }
     });
   }
