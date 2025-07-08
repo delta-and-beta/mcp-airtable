@@ -3,6 +3,7 @@ import { Request } from 'express';
 export interface RequestContext {
   airtableApiKey?: string;
   airtableBaseId?: string;
+  typecast?: boolean;
 }
 
 /**
@@ -37,6 +38,14 @@ export function extractRequestContext(req: Request): RequestContext {
   const baseIdHeader = headers['x-airtable-base-id'];
   if (baseIdHeader) {
     context.airtableBaseId = baseIdHeader;
+  }
+  
+  // Check for typecast option in headers (case-insensitive)
+  const typecastHeader = headers['x-airtable-option-typecast'];
+  if (typecastHeader !== undefined) {
+    // Accept various boolean representations
+    const value = typecastHeader.toLowerCase();
+    context.typecast = value === 'true' || value === '1' || value === 'yes';
   }
   
   return context;
