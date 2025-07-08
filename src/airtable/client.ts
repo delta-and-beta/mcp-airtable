@@ -145,6 +145,26 @@ export class AirtableClient {
     };
   }
 
+  async getRecord(
+    tableName: string,
+    recordId: string,
+    options: { baseId?: string } = {}
+  ) {
+    const base = this.getBase(options.baseId);
+    const table = base(tableName);
+
+    try {
+      const record = await table.find(recordId);
+      return {
+        id: record.id,
+        fields: record.fields,
+        createdTime: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+      };
+    } catch (error) {
+      this.wrapSdkError(error, 'Get record');
+    }
+  }
+
   async getRecords(
     tableName: string,
     options: {
