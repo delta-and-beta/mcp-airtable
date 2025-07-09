@@ -395,7 +395,7 @@ export const toolDefinitions: Tool[] = [
   },
   {
     name: 'upload_attachment',
-    description: 'Upload a file to cloud storage and get a URL for Airtable attachment fields',
+    description: 'Upload a file to cloud storage and get a URL for Airtable attachment fields. Provide either filePath OR (base64Data + filename)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -421,10 +421,7 @@ export const toolDefinitions: Tool[] = [
           description: 'Storage provider to use (defaults to configured provider)',
         },
       },
-      oneOf: [
-        { required: ['filePath'] },
-        { required: ['base64Data', 'filename'] },
-      ],
+      required: [],
       additionalProperties: false,
     },
   },
