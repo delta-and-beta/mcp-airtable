@@ -19,6 +19,7 @@ export const ListBasesSchema = ApiKeySchema.extend({});
 
 export const ListTablesSchema = ApiKeySchema.extend({
   baseId: BaseIdSchema.optional(),
+  includeFields: z.boolean().optional().default(false),
 });
 
 export const ListViewsSchema = ApiKeySchema.extend({
