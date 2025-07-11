@@ -24,6 +24,11 @@ export const toolDefinitions: Tool[] = [
           type: 'string',
           description: 'The ID of the base (optional if default base is set)',
         },
+        includeFields: {
+          type: 'boolean',
+          description: 'Include field definitions in the response (default: false)',
+          default: false,
+        },
       },
       additionalProperties: false,
     },
