@@ -557,12 +557,12 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return result;
   },
 
-  list_tables: async (args: { baseId?: string; airtableApiKey?: string; airtableBaseId?: string }) => {
+  list_tables: async (args: { baseId?: string; includeFields?: boolean; airtableApiKey?: string; airtableBaseId?: string }) => {
     // Check base access if baseId provided
     if (args.baseId) {
       enforceBaseAccess(args.baseId);
     }
-    const result = await getClient(args.airtableApiKey, args.airtableBaseId).listTables(args.baseId) as any;
+    const result = await getClient(args.airtableApiKey, args.airtableBaseId).listTables(args.baseId, args.includeFields ?? false) as any;
     // Filter tables based on access control
     if (result.tables) {
       result.tables = filterTables(result.tables);

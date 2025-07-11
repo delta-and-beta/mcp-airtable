@@ -98,7 +98,7 @@ export class AirtableClient {
     return response.json();
   }
 
-  async listTables(baseId?: string) {
+  async listTables(baseId?: string, includeFields: boolean = false) {
     const response = await fetch(
       `https://api.airtable.com/v0/meta/bases/${baseId || this.defaultBaseId}/tables`,
       {
@@ -112,7 +112,28 @@ export class AirtableClient {
       await this.parseApiError(response, 'List tables');
     }
 
-    return response.json();
+    const data: any = await response.json();
+    
+    // If includeFields is false, strip out field definitions to reduce response size
+    if (!includeFields && data.tables) {
+      return {
+        ...data,
+        tables: data.tables.map((table: any) => ({
+          id: table.id,
+          name: table.name,
+          description: table.description,
+          primaryFieldId: table.primaryFieldId,
+          views: table.views?.map((view: any) => ({
+            id: view.id,
+            name: view.name,
+            type: view.type,
+          })) || [],
+          // Omit fields array to reduce token count
+        })),
+      };
+    }
+
+    return data;
   }
 
   async listViews(tableName: string, baseId?: string) {
