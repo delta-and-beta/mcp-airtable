@@ -95,7 +95,7 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).listTables(validated.baseId);
+      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).listTables(validated.baseId, validated.includeFields);
     });
   },
 
