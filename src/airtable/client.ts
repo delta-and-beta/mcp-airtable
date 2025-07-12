@@ -7,18 +7,36 @@ export interface AirtableConfig {
   baseId?: string;
 }
 
+export interface AirtableOAuthConfig {
+  accessToken: string;
+  baseId?: string;
+}
+
+export type AirtableAuthConfig = AirtableConfig | AirtableOAuthConfig;
+
 export class AirtableClient {
   private airtable: Airtable;
-  private apiKey: string;
+  private auth: { type: 'apikey'; apiKey: string } | { type: 'oauth'; accessToken: string };
   private defaultBaseId?: string;
 
-  constructor(config: AirtableConfig) {
-    if (!config.apiKey) {
-      throw new Error('Airtable API key is required');
+  constructor(config: AirtableAuthConfig) {
+    if ('apiKey' in config) {
+      if (!config.apiKey) {
+        throw new Error('Airtable API key is required');
+      }
+      this.auth = { type: 'apikey', apiKey: config.apiKey };
+      this.airtable = new Airtable({ apiKey: config.apiKey });
+    } else if ('accessToken' in config) {
+      if (!config.accessToken) {
+        throw new Error('Airtable access token is required');
+      }
+      this.auth = { type: 'oauth', accessToken: config.accessToken };
+      // For OAuth, we'll use the access token as a bearer token
+      this.airtable = new Airtable({ apiKey: config.accessToken });
+    } else {
+      throw new Error('Either API key or access token is required');
     }
-
-    this.apiKey = config.apiKey;
-    this.airtable = new Airtable({ apiKey: config.apiKey });
+    
     this.defaultBaseId = config.baseId;
   }
 
@@ -84,11 +102,17 @@ export class AirtableClient {
     );
   }
 
+  private getAuthHeaders(): Record<string, string> {
+    if (this.auth.type === 'apikey') {
+      return { Authorization: `Bearer ${this.auth.apiKey}` };
+    } else {
+      return { Authorization: `Bearer ${this.auth.accessToken}` };
+    }
+  }
+
   async listBases() {
     const response = await fetch('https://api.airtable.com/v0/meta/bases', {
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-      },
+      headers: this.getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -103,7 +127,7 @@ export class AirtableClient {
       `https://api.airtable.com/v0/meta/bases/${baseId || this.defaultBaseId}/tables`,
       {
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          ...this.getAuthHeaders(),
         },
       }
     );
@@ -142,7 +166,7 @@ export class AirtableClient {
       `https://api.airtable.com/v0/meta/bases/${baseId || this.defaultBaseId}/tables`,
       {
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          ...this.getAuthHeaders(),
         },
       }
     );
@@ -301,7 +325,7 @@ export class AirtableClient {
       `https://api.airtable.com/v0/meta/bases/${baseId || this.defaultBaseId}`,
       {
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          ...this.getAuthHeaders(),
         },
       }
     );
