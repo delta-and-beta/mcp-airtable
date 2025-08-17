@@ -436,6 +436,22 @@ export const toolDefinitions: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {
+        airtableApiKey: {
+          type: 'string',
+          description: 'Airtable API key (optional if default key is set)',
+        },
+        airtableBaseId: {
+          type: 'string',
+          description: 'Airtable base ID (optional if default base is set)',
+        },
+        oauthToken: {
+          type: 'string',
+          description: 'OAuth access token (alternative to API key)',
+        },
+        userId: {
+          type: 'string',
+          description: 'User ID for OAuth token lookup (alternative to API key)',
+        },
         tableName: {
           type: 'string',
           description: 'The name of the table',
@@ -469,6 +485,18 @@ export const toolDefinitions: Tool[] = [
         typecast: {
           type: 'boolean',
           description: 'Automatically typecast values to match field types',
+          default: false,
+        },
+        upsertFields: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'Array of field names to use for matching existing records. If not provided and detectUpsertFields is true, will attempt to auto-detect.',
+        },
+        detectUpsertFields: {
+          type: 'boolean',
+          description: 'Automatically detect which fields to use for upsert matching (default: false)',
           default: false,
         },
       },
