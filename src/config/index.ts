@@ -103,6 +103,11 @@ export function parseList(value: string | undefined): string[] {
 /**
  * Configuration helper functions
  */
+// Helper function to get config
+export function getConfig(): Config {
+  return config;
+}
+
 export const configHelpers = {
   isProduction: () => config.NODE_ENV === 'production',
   isDevelopment: () => config.NODE_ENV === 'development',
