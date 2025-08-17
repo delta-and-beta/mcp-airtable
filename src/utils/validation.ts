@@ -8,10 +8,12 @@ const ViewSchema = z.string().min(1);
 const FilePathSchema = z.string().min(1);
 const Base64Schema = z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/, 'Invalid base64 format');
 
-// Common schema for API key fields
+// Common schema for authentication fields
 const ApiKeySchema = z.object({
   airtableApiKey: z.string().optional(),
   airtableBaseId: z.string().optional(),
+  oauthToken: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 // Tool input schemas

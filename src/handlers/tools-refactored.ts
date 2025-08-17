@@ -3,6 +3,7 @@ import { S3StorageClient } from '../s3/client.js';
 import { config } from '../config/index.js';
 import { airtableRateLimiter } from '../utils/rate-limiter-redis.js';
 import { AirtableError } from '../utils/errors.js';
+import { getOAuthService } from '../services/oauth/index.js';
 import {
   validateInput,
   ListBasesSchema,
@@ -22,23 +23,66 @@ import {
 } from '../utils/validation.js';
 import type { FieldSet } from 'airtable';
 
-// Client cache for reusing connections with the same API key
+// Client cache for reusing connections
 const clientCache = new Map<string, AirtableClient>();
 let s3Client: S3StorageClient | null = null;
 
-function getAirtableClient(apiKey?: string, baseId?: string): AirtableClient {
-  const key = apiKey || config.AIRTABLE_API_KEY || '';
-  if (!key) {
-    throw new Error('Airtable API key is required. Provide it via apiKey parameter or set AIRTABLE_API_KEY environment variable.');
+interface AuthOptions {
+  apiKey?: string;
+  oauthToken?: string;
+  userId?: string;
+  baseId?: string;
+}
+
+async function getAirtableClient(options: AuthOptions): Promise<AirtableClient> {
+  // Handle OAuth token
+  if (options.oauthToken) {
+    const cacheKey = `oauth:${options.oauthToken}`;
+    if (!clientCache.has(cacheKey)) {
+      clientCache.set(cacheKey, new AirtableClient({
+        accessToken: options.oauthToken,
+        baseId: options.baseId || config.AIRTABLE_BASE_ID,
+      }));
+    }
+    return clientCache.get(cacheKey)!;
   }
   
-  if (!clientCache.has(key)) {
-    clientCache.set(key, new AirtableClient({
+  // Handle OAuth with userId (auto-fetch token)
+  if (options.userId && config.AIRTABLE_OAUTH_ENABLED) {
+    const oauthService = getOAuthService();
+    if (oauthService) {
+      try {
+        const accessToken = await oauthService.getValidAccessToken(options.userId);
+        const cacheKey = `oauth:${accessToken}`;
+        if (!clientCache.has(cacheKey)) {
+          clientCache.set(cacheKey, new AirtableClient({
+            accessToken,
+            baseId: options.baseId || config.AIRTABLE_BASE_ID,
+          }));
+        }
+        return clientCache.get(cacheKey)!;
+      } catch (error) {
+        // Fall through to API key if OAuth fails
+        console.warn('OAuth token fetch failed, falling back to API key:', error instanceof Error ? error.message : 'Unknown error');
+      }
+    }
+  }
+  
+  // Handle API key
+  const key = options.apiKey || config.AIRTABLE_API_KEY || '';
+  if (!key) {
+    throw new Error('Airtable authentication required. Provide apiKey, oauthToken, or userId parameter.');
+  }
+  
+  const cacheKey = `apikey:${key}`;
+  if (!clientCache.has(cacheKey)) {
+    clientCache.set(cacheKey, new AirtableClient({
       apiKey: key,
-      baseId: baseId || config.AIRTABLE_BASE_ID,
+      baseId: options.baseId || config.AIRTABLE_BASE_ID,
     }));
   }
-  return clientCache.get(key)!;
+  
+  return clientCache.get(cacheKey)!;
 }
 
 function getS3Client(): S3StorageClient {
@@ -56,6 +100,16 @@ function getS3Client(): S3StorageClient {
     });
   }
   return s3Client;
+}
+
+// Extract auth options from validated input
+function extractAuthOptions(validated: any): AuthOptions {
+  return {
+    apiKey: validated.airtableApiKey,
+    oauthToken: validated.oauthToken,
+    userId: validated.userId,
+    baseId: validated.airtableBaseId,
+  };
 }
 
 // Wrap async operations with proper error handling
@@ -86,7 +140,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).listBases();
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.listBases();
     });
   },
 
@@ -95,7 +150,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).listTables(validated.baseId, validated.includeFields);
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.listTables(validated.baseId, validated.includeFields);
     });
   },
 
@@ -104,7 +160,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).createTable(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.createTable(
         validated.name,
         validated.fields,
         {
@@ -120,7 +177,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).updateTable(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.updateTable(
         validated.tableIdOrName,
         {
           name: validated.name,
@@ -138,7 +196,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).createField(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.createField(
         validated.tableIdOrName,
         {
           name: validated.name,
@@ -158,7 +217,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).updateField(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.updateField(
         validated.tableIdOrName,
         validated.fieldIdOrName,
         {
@@ -177,7 +237,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).getRecords(validated.tableName, {
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.getRecords(validated.tableName, {
         baseId: validated.baseId,
         view: validated.view,
         maxRecords: validated.maxRecords,
@@ -193,7 +254,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).getRecord(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.getRecord(
         validated.tableName,
         validated.recordId,
         { baseId: validated.baseId }
@@ -206,7 +268,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).createRecord(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.createRecord(
         validated.tableName,
         validated.fields as FieldSet,
         { baseId: validated.baseId, typecast: validated.typecast }
@@ -219,7 +282,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).updateRecord(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.updateRecord(
         validated.tableName,
         validated.recordId,
         validated.fields as FieldSet,
@@ -233,7 +297,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).deleteRecord(
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.deleteRecord(
         validated.tableName,
         validated.recordId,
         { baseId: validated.baseId }
@@ -246,7 +311,8 @@ export const toolHandlers = {
     await airtableRateLimiter.acquire('global');
     
     return withErrorHandling(async () => {
-      return await getAirtableClient(validated.airtableApiKey, validated.airtableBaseId).getSchema(validated.baseId);
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.getSchema(validated.baseId);
     });
   },
 
@@ -292,7 +358,7 @@ export const toolHandlers = {
     const validated = validateInput(BatchUpsertSchema, args);
     
     return withErrorHandling(async () => {
-      const client = getAirtableClient(validated.airtableApiKey, validated.airtableBaseId);
+      const client = await getAirtableClient(extractAuthOptions(validated));
       
       // Determine upsert fields
       let fieldsToMergeOn = validated.upsertFields;

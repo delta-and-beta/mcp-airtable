@@ -75,6 +75,19 @@ const LoggingSchema = z.object({
   LOG_FORMAT: z.enum(['json', 'pretty']).default('json'),
 });
 
+// OAuth configuration schema
+const OAuthConfigSchema = z.object({
+  AIRTABLE_OAUTH_ENABLED: z.string().default('false').transform(v => v === 'true'),
+  AIRTABLE_OAUTH_CLIENT_ID: z.string().optional(),
+  AIRTABLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  AIRTABLE_OAUTH_REDIRECT_URI: z.string().optional(),
+  AIRTABLE_OAUTH_SCOPES: z.string().default('data.records:read data.records:write schema.bases:read'),
+  AIRTABLE_OAUTH_AUTHORIZATION_URL: z.string().default('https://airtable.com/oauth2/v1/authorize'),
+  AIRTABLE_OAUTH_TOKEN_URL: z.string().default('https://airtable.com/oauth2/v1/token'),
+  OAUTH_SESSION_SECRET: z.string().optional().describe('Secret for OAuth session management'),
+  TOKEN_STORE_TYPE: z.enum(['memory', 'redis']).default('memory'),
+});
+
 // Complete configuration schema
 export const ConfigSchema = ServerConfigSchema
   .merge(AirtableConfigSchema)
@@ -85,6 +98,7 @@ export const ConfigSchema = ServerConfigSchema
   .merge(AccessControlSchema)
   .merge(RateLimitSchema)
   .merge(LoggingSchema)
+  .merge(OAuthConfigSchema)
   .refine(
     (config) => {
       // If S3 bucket is provided, AWS credentials must be provided
@@ -107,6 +121,32 @@ export const ConfigSchema = ServerConfigSchema
     },
     {
       message: 'GCS credentials (key file or client email/private key) are required when GCS_BUCKET is set',
+    }
+  )
+  .refine(
+    (config) => {
+      // If OAuth is enabled, required OAuth fields must be provided
+      if (config.AIRTABLE_OAUTH_ENABLED) {
+        return config.AIRTABLE_OAUTH_CLIENT_ID && 
+               config.AIRTABLE_OAUTH_REDIRECT_URI &&
+               config.OAUTH_SESSION_SECRET;
+      }
+      return true;
+    },
+    {
+      message: 'OAuth client ID, redirect URI, and session secret are required when OAuth is enabled',
+    }
+  )
+  .refine(
+    (config) => {
+      // If token store is Redis, Redis URL must be provided
+      if (config.TOKEN_STORE_TYPE === 'redis' && config.AIRTABLE_OAUTH_ENABLED) {
+        return !!config.REDIS_URL;
+      }
+      return true;
+    },
+    {
+      message: 'REDIS_URL is required when using Redis token store with OAuth enabled',
     }
   );
 
