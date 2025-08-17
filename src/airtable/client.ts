@@ -442,7 +442,9 @@ export class AirtableClient {
     }
 
     // If no upsert configuration, fall back to regular create
-    if (!options.performUpsert || !options.performUpsert.fieldsToMergeOn?.length) {
+    if (!options.performUpsert || 
+        !options.performUpsert.fieldsToMergeOn || 
+        options.performUpsert.fieldsToMergeOn.length === 0) {
       return this.batchCreate(tableName, records, { baseId, typecast: options.typecast });
     }
 
