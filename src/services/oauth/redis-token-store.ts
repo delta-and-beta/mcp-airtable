@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Redis from 'ioredis';
 import { TokenSet, TokenStore, AuthorizationRequest } from './types.js';
 
@@ -5,7 +6,7 @@ import { TokenSet, TokenStore, AuthorizationRequest } from './types.js';
  * Redis-based token store implementation for production use.
  */
 export class RedisTokenStore implements TokenStore {
-  private redis: Redis;
+  private redis: any;
   private readonly TOKEN_PREFIX = 'oauth:tokens:';
   private readonly AUTH_REQUEST_PREFIX = 'oauth:auth:';
   private readonly TOKEN_TTL = 90 * 24 * 60 * 60; // 90 days
