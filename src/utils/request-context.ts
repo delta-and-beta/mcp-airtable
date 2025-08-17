@@ -5,6 +5,9 @@ export interface RequestContext {
   airtableBaseId?: string;
   typecast?: boolean;
   maxRecords?: number;
+  authMode?: 'apikey' | 'oauth';
+  oauthAccessToken?: string;
+  userId?: string;
 }
 
 /**
@@ -24,14 +27,25 @@ export function extractRequestContext(req: Request): RequestContext {
   // Check for API key in various header formats (case-insensitive)
   const apiKeyHeader = headers['x-airtable-api-key'];
   const authHeader = headers['authorization'];
+  const oauthTokenHeader = headers['x-airtable-oauth-token'];
+  const userIdHeader = headers['x-airtable-user-id'];
   
-  if (apiKeyHeader) {
+  // Check for OAuth token first
+  if (oauthTokenHeader) {
+    context.oauthAccessToken = oauthTokenHeader;
+    context.authMode = 'oauth';
+    if (userIdHeader) {
+      context.userId = userIdHeader;
+    }
+  } else if (apiKeyHeader) {
     context.airtableApiKey = apiKeyHeader;
+    context.authMode = 'apikey';
   } else if (authHeader && authHeader.toLowerCase().includes('pat')) {
     // Check if this is an Airtable PAT (not MCP auth token)
     const bearerToken = authHeader.replace(/^bearer\s+/i, '');
     if (bearerToken.startsWith('pat')) {
       context.airtableApiKey = bearerToken;
+      context.authMode = 'apikey';
     }
   }
   

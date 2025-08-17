@@ -14,6 +14,7 @@ import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 import { rateLimitMiddleware } from './utils/rate-limiter-redis.js';
 import { extractRequestContext } from './utils/request-context.js';
+import oauthRoutes from './routes/oauth.js';
 
 // Load environment variables
 // Only load .env file in development
@@ -85,6 +86,11 @@ app.get('/health', async (_req, res) => {
   };
   res.json(health);
 });
+
+// OAuth routes (no authentication required for OAuth flow)
+if (config.AIRTABLE_OAUTH_ENABLED) {
+  app.use('/oauth', oauthRoutes);
+}
 
 // Authentication middleware
 const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
