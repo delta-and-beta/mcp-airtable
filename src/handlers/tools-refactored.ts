@@ -369,7 +369,7 @@ export const toolHandlers = {
         // Get table schema for better detection
         let tableSchema;
         try {
-          const schema = await client.getSchema(validated.baseId) as any;
+          const schema = await client.getSchema(validated.baseId || validated.airtableBaseId) as any;
           tableSchema = schema.tables?.find((t: any) => t.name === validated.tableName);
         } catch (error) {
           // Schema fetch is optional
@@ -378,7 +378,9 @@ export const toolHandlers = {
         fieldsToMergeOn = detectUpsertFields(validated.records, tableSchema);
         
         if (fieldsToMergeOn.length === 0) {
-          throw new Error('Could not detect suitable upsert fields. Please specify upsertFields manually.');
+          // If no suitable upsert fields found, fall back to regular batch create
+          // by not setting fieldsToMergeOn (it will remain undefined)
+          fieldsToMergeOn = undefined;
         }
       }
 
@@ -394,7 +396,7 @@ export const toolHandlers = {
 
       // Perform batch upsert
       const options: any = {
-        baseId: validated.baseId,
+        baseId: validated.baseId || validated.airtableBaseId,
         typecast: validated.typecast,
       };
       
