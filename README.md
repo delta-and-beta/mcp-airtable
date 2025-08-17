@@ -8,11 +8,12 @@ A Model Context Protocol (MCP) server that provides seamless integration with Ai
 - 📊 **Schema Inspection**: Explore base and table structures (Enterprise plan required)
 - 🔍 **Advanced Filtering**: Use Airtable formulas for complex queries
 - 📎 **Attachment Support**: Upload files to S3 or Google Cloud Storage
-- 🔐 **Secure Authentication**: Token-based API authentication
+- 🔐 **Secure Authentication**: Token-based API authentication with OAuth 2.0 support
 - ⚡ **Rate Limiting**: Configurable request throttling
 - 🚀 **Batch Operations**: Efficient bulk record operations
 - 🛡️ **Access Control**: Fine-grained permissions for bases and tables
 - 🔄 **Automatic Type Conversion**: Configurable typecast option for seamless data handling
+- 🔑 **OAuth 2.0**: Modern authentication with automatic token refresh
 
 ## Installation
 
@@ -91,8 +92,14 @@ See the [MCP Remote Setup Guide](docs/mcp-remote-setup.md) for detailed configur
 The server is configured through environment variables. Create a `.env` file in your project root:
 
 ```bash
-# Optional - Can be provided via request headers or tool arguments
+# Authentication - Choose one method:
+# Option 1: API Key (Personal Access Token)
 AIRTABLE_API_KEY=your_airtable_api_key
+
+# Option 2: OAuth 2.0 (See OAuth Guide)
+AIRTABLE_OAUTH_ENABLED=false
+AIRTABLE_OAUTH_CLIENT_ID=your_client_id
+AIRTABLE_OAUTH_REDIRECT_URI=http://localhost:4000/oauth/callback
 
 # Required for production
 MCP_AUTH_TOKEN=your_secure_auth_token
@@ -501,6 +508,12 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Documentation
+
+- 📖 [OAuth Setup Guide](docs/OAUTH_GUIDE.md) - Set up OAuth 2.0 authentication
+- 🔧 [MCP Remote Setup](docs/mcp-remote-setup.md) - Configure remote MCP server
+- 🏗️ [OAuth Design Document](docs/OAUTH_DESIGN.md) - Technical OAuth implementation details
 
 ## Support
 
