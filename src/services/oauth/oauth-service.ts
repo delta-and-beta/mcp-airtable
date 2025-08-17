@@ -75,7 +75,7 @@ export class OAuthService {
         );
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
       
       const tokens: TokenSet = {
         accessToken: data.access_token,
@@ -96,7 +96,7 @@ export class OAuthService {
         throw error;
       }
       throw new OAuthError(
-        `Failed to exchange code for tokens: ${error.message}`,
+        `Failed to exchange code for tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'token_exchange_error',
         500
       );
@@ -135,7 +135,7 @@ export class OAuthService {
         );
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
       
       return {
         accessToken: data.access_token,
@@ -149,7 +149,7 @@ export class OAuthService {
         throw error;
       }
       throw new OAuthError(
-        `Failed to refresh token: ${error.message}`,
+        `Failed to refresh token: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'token_refresh_error',
         500
       );
