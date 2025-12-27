@@ -7,7 +7,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { config as loadEnv } from 'dotenv';
-import { validateConfig, config } from './utils/config.js';
+import { validateConfig, config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
 import { toolHandlers, toolDefinitions } from './tools/index.js';
