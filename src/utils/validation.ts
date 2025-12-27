@@ -111,6 +111,22 @@ export const BatchDeleteSchema = ApiKeySchema.extend({
   baseId: BaseIdSchema.optional(),
 });
 
+export const UploadAttachmentDirectSchema = ApiKeySchema.extend({
+  recordId: RecordIdSchema,
+  fieldIdOrName: z.string().min(1, 'Field ID or name is required'),
+  filePath: FilePathSchema.optional(),
+  base64Data: z.string().optional(),
+  filename: z.string().min(1).optional(),
+  contentType: z.string().optional(),
+  baseId: BaseIdSchema.optional(),
+}).refine(
+  (data) => data.filePath || data.base64Data,
+  { message: 'Either filePath or base64Data must be provided' }
+).refine(
+  (data) => !data.base64Data || data.filename,
+  { message: 'filename is required when using base64Data' }
+);
+
 export const BatchUpsertSchema = ApiKeySchema.extend({
   tableName: TableNameSchema,
   records: z.array(z.object({

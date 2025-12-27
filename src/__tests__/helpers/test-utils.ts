@@ -1,10 +1,11 @@
 // Test utilities and helpers
+import { jest, beforeEach, afterEach, expect } from '@jest/globals';
 
 export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const mockEnv = (overrides: Record<string, string> = {}) => {
   const originalEnv = process.env;
-  
+
   beforeEach(() => {
     jest.resetModules();
     process.env = {
@@ -67,7 +68,7 @@ export const createBatchRecords = (count: number, overrides: any = {}) => {
 export const mockConsoleError = () => {
   const originalError = console.error;
   beforeEach(() => {
-    console.error = jest.fn();
+    console.error = jest.fn() as typeof console.error;
   });
   afterEach(() => {
     console.error = originalError;

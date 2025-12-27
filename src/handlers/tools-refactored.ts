@@ -3,11 +3,20 @@ import { S3StorageClient } from '../s3/client.js';
 import { config } from '../config/index.js';
 import { airtableRateLimiter } from '../utils/rate-limiter-redis.js';
 import { AirtableError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
 import { getOAuthService } from '../services/oauth/index.js';
+import {
+  enforceBaseAccess,
+  enforceTableAccess,
+  enforceViewAccess,
+  filterBases,
+  filterTables,
+} from '../utils/access-control.js';
 import {
   validateInput,
   ListBasesSchema,
   ListTablesSchema,
+  ListViewsSchema,
   GetRecordsSchema,
   GetRecordSchema,
   CreateRecordSchema,
@@ -15,23 +24,49 @@ import {
   DeleteRecordSchema,
   GetSchemaSchema,
   UploadAttachmentSchema,
+  UploadAttachmentDirectSchema,
   BatchUpsertSchema,
+  BatchDeleteSchema,
   CreateTableSchema,
   UpdateTableSchema,
   CreateFieldSchema,
   UpdateFieldSchema,
 } from '../utils/validation.js';
+import { readFile } from 'fs/promises';
+import { basename } from 'path';
 import type { FieldSet } from 'airtable';
 
 // Client cache for reusing connections
 const clientCache = new Map<string, AirtableClient>();
 let s3Client: S3StorageClient | null = null;
 
+// Type definitions for handler inputs
 interface AuthOptions {
   apiKey?: string;
   oauthToken?: string;
   userId?: string;
   baseId?: string;
+}
+
+interface ValidatedAuthInput {
+  airtableApiKey?: string;
+  oauthToken?: string;
+  userId?: string;
+  airtableBaseId?: string;
+}
+
+interface TableSchema {
+  id: string;
+  name: string;
+  fields?: Array<{ id: string; name: string; type: string }>;
+}
+
+interface BatchUpsertOptions {
+  baseId?: string;
+  typecast?: boolean;
+  performUpsert?: {
+    fieldsToMergeOn: string[];
+  };
 }
 
 async function getAirtableClient(options: AuthOptions): Promise<AirtableClient> {
@@ -63,7 +98,7 @@ async function getAirtableClient(options: AuthOptions): Promise<AirtableClient> 
         return clientCache.get(cacheKey)!;
       } catch (error) {
         // Fall through to API key if OAuth fails
-        console.warn('OAuth token fetch failed, falling back to API key:', error instanceof Error ? error.message : 'Unknown error');
+        logger.warn('OAuth token fetch failed, falling back to API key', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
   }
@@ -103,7 +138,7 @@ function getS3Client(): S3StorageClient {
 }
 
 // Extract auth options from validated input
-function extractAuthOptions(validated: any): AuthOptions {
+function extractAuthOptions(validated: ValidatedAuthInput): AuthOptions {
   return {
     apiKey: validated.airtableApiKey,
     oauthToken: validated.oauthToken,
@@ -138,27 +173,43 @@ export const toolHandlers = {
   list_bases: async (args: unknown) => {
     const validated = validateInput(ListBasesSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
-      return await client.listBases();
+      const result = await client.listBases() as { bases?: Array<{ id: string; name: string }> };
+      // Filter bases based on access control
+      return { bases: filterBases(result.bases || []) };
     });
   },
 
   list_tables: async (args: unknown) => {
     const validated = validateInput(ListTablesSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce base access if baseId provided
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
-      return await client.listTables(validated.baseId, validated.includeFields);
+      const result = await client.listTables(validated.baseId, validated.includeFields) as { tables?: Array<{ id: string; name: string }> };
+      // Filter tables based on access control
+      return { tables: filterTables(result.tables || []) };
     });
   },
 
   create_table: async (args: unknown) => {
     const validated = validateInput(CreateTableSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce base access
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    // Check if new table name is allowed
+    enforceTableAccess(validated.name);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.createTable(
@@ -175,7 +226,17 @@ export const toolHandlers = {
   update_table: async (args: unknown) => {
     const validated = validateInput(UpdateTableSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce base and table access
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableIdOrName);
+    // If renaming, check new name is allowed
+    if (validated.name) {
+      enforceTableAccess(validated.name);
+    }
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.updateTable(
@@ -194,7 +255,13 @@ export const toolHandlers = {
   create_field: async (args: unknown) => {
     const validated = validateInput(CreateFieldSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce base and table access
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableIdOrName);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.createField(
@@ -215,7 +282,13 @@ export const toolHandlers = {
   update_field: async (args: unknown) => {
     const validated = validateInput(UpdateFieldSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce base and table access
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableIdOrName);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.updateField(
@@ -232,10 +305,35 @@ export const toolHandlers = {
     });
   },
 
+  list_views: async (args: unknown) => {
+    const validated = validateInput(ListViewsSchema, args);
+    await airtableRateLimiter.acquire('global');
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableName);
+
+    return withErrorHandling(async () => {
+      const client = await getAirtableClient(extractAuthOptions(validated));
+      return await client.listViews(validated.tableName, validated.baseId);
+    });
+  },
+
   get_records: async (args: unknown) => {
     const validated = validateInput(GetRecordsSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableName);
+    if (validated.view) {
+      enforceViewAccess(validated.view);
+    }
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.getRecords(validated.tableName, {
@@ -252,7 +350,13 @@ export const toolHandlers = {
   get_record: async (args: unknown) => {
     const validated = validateInput(GetRecordSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableName);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.getRecord(
@@ -266,7 +370,13 @@ export const toolHandlers = {
   create_record: async (args: unknown) => {
     const validated = validateInput(CreateRecordSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableName);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.createRecord(
@@ -280,7 +390,13 @@ export const toolHandlers = {
   update_record: async (args: unknown) => {
     const validated = validateInput(UpdateRecordSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableName);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.updateRecord(
@@ -295,7 +411,13 @@ export const toolHandlers = {
   delete_record: async (args: unknown) => {
     const validated = validateInput(DeleteRecordSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableName);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.deleteRecord(
@@ -309,7 +431,12 @@ export const toolHandlers = {
   get_schema: async (args: unknown) => {
     const validated = validateInput(GetSchemaSchema, args);
     await airtableRateLimiter.acquire('global');
-    
+
+    // Enforce base access
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
       return await client.getSchema(validated.baseId);
@@ -356,10 +483,17 @@ export const toolHandlers = {
 
   batch_upsert: async (args: unknown) => {
     const validated = validateInput(BatchUpsertSchema, args);
-    
+
+    // Enforce access control
+    const baseId = validated.baseId || validated.airtableBaseId;
+    if (baseId) {
+      enforceBaseAccess(baseId);
+    }
+    enforceTableAccess(validated.tableName);
+
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
-      
+
       // Determine upsert fields
       let fieldsToMergeOn = validated.upsertFields;
       
@@ -367,14 +501,14 @@ export const toolHandlers = {
         const { detectUpsertFields } = await import('../utils/upsert-detection.js');
         
         // Get table schema for better detection
-        let tableSchema;
+        let tableSchema: TableSchema | undefined;
         try {
-          const schema = await client.getSchema(validated.baseId || validated.airtableBaseId) as any;
-          tableSchema = schema.tables?.find((t: any) => t.name === validated.tableName);
-        } catch (error) {
+          const schema = await client.getSchema(validated.baseId || validated.airtableBaseId) as { tables?: TableSchema[] };
+          tableSchema = schema.tables?.find((t: TableSchema) => t.name === validated.tableName);
+        } catch {
           // Schema fetch is optional
         }
-        
+
         fieldsToMergeOn = detectUpsertFields(validated.records, tableSchema);
         
         if (fieldsToMergeOn.length === 0) {
@@ -395,11 +529,11 @@ export const toolHandlers = {
       }
 
       // Perform batch upsert
-      const options: any = {
+      const options: BatchUpsertOptions = {
         baseId: validated.baseId || validated.airtableBaseId,
         typecast: validated.typecast,
       };
-      
+
       if (fieldsToMergeOn && fieldsToMergeOn.length > 0) {
         options.performUpsert = {
           fieldsToMergeOn,
@@ -413,10 +547,78 @@ export const toolHandlers = {
       );
     });
   },
+
+  batch_delete: async (args: unknown) => {
+    const validated = validateInput(BatchDeleteSchema, args);
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+    enforceTableAccess(validated.tableName);
+
+    return withErrorHandling(async () => {
+      const client = await getAirtableClient(extractAuthOptions(validated));
+
+      // Apply rate limiting per chunk (10 records per API call)
+      const chunks = [];
+      for (let i = 0; i < validated.recordIds.length; i += 10) {
+        chunks.push(validated.recordIds.slice(i, i + 10));
+      }
+
+      for (const _chunk of chunks) {
+        await airtableRateLimiter.acquire('global');
+      }
+
+      return await client.batchDelete(validated.tableName, validated.recordIds, {
+        baseId: validated.baseId,
+      });
+    });
+  },
+
+  upload_attachment_direct: async (args: unknown) => {
+    const validated = validateInput(UploadAttachmentDirectSchema, args);
+    await airtableRateLimiter.acquire('global');
+
+    // Enforce access control
+    if (validated.baseId) {
+      enforceBaseAccess(validated.baseId);
+    }
+
+    return withErrorHandling(async () => {
+      const client = await getAirtableClient(extractAuthOptions(validated));
+
+      let content: Buffer;
+      let filename: string;
+
+      if (validated.filePath) {
+        // Read file from disk
+        content = await readFile(validated.filePath);
+        filename = validated.filename || basename(validated.filePath);
+      } else if (validated.base64Data && validated.filename) {
+        // Decode base64 data
+        content = Buffer.from(validated.base64Data, 'base64');
+        filename = validated.filename;
+      } else {
+        throw new Error('Either filePath or (base64Data + filename) must be provided');
+      }
+
+      return await client.uploadAttachment(
+        validated.recordId,
+        validated.fieldIdOrName,
+        content,
+        {
+          filename,
+          contentType: validated.contentType,
+          baseId: validated.baseId,
+        }
+      );
+    });
+  },
 } as const;
 
 // Type-safe tool handler type
 export type ToolHandler = typeof toolHandlers[keyof typeof toolHandlers];
 
-// Export tool definitions (keep existing definitions)
-export { toolDefinitions } from './tools.js';
+// Re-export tool definitions from the canonical source
+export { toolDefinitions } from '../tools/definitions.js';

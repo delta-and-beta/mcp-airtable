@@ -754,4 +754,136 @@ export class AirtableClient {
 
     return response.json();
   }
+
+  /**
+   * Upload a file directly to an Airtable attachment field.
+   * Uses Airtable's content API (content.airtable.com) for direct binary uploads.
+   *
+   * @param recordId - The ID of the record to attach the file to
+   * @param fieldIdOrName - The ID or name of the attachment field
+   * @param content - The file content as a Buffer or base64 string
+   * @param options - Upload options including filename, contentType, and baseId
+   * @returns The updated record with the new attachment
+   */
+  async uploadAttachment(
+    recordId: string,
+    fieldIdOrName: string,
+    content: Buffer | string,
+    options: {
+      filename: string;
+      contentType?: string;
+      baseId?: string;
+    }
+  ): Promise<{
+    id: string;
+    fields: Record<string, unknown>;
+  }> {
+    const baseId = options.baseId || this.defaultBaseId;
+    if (!baseId) {
+      throw new Error('Base ID is required for uploading attachments');
+    }
+
+    // Convert content to base64 if it's a Buffer
+    let base64Content: string;
+    if (Buffer.isBuffer(content)) {
+      base64Content = content.toString('base64');
+    } else {
+      // Assume it's already base64
+      base64Content = content;
+    }
+
+    // Determine content type if not provided
+    let contentType = options.contentType;
+    if (!contentType) {
+      contentType = this.guessContentType(options.filename);
+    }
+
+    // Build the upload payload
+    const payload = {
+      contentType,
+      filename: options.filename,
+      file: base64Content,
+    };
+
+    // Use the content.airtable.com endpoint for direct uploads
+    const response = await fetch(
+      `https://content.airtable.com/v0/${baseId}/${recordId}/${encodeURIComponent(fieldIdOrName)}/uploadAttachment`,
+      {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      await this.parseApiError(response, 'Upload attachment');
+    }
+
+    return response.json() as Promise<{ id: string; fields: Record<string, unknown> }>;
+  }
+
+  /**
+   * Guess the MIME type based on file extension.
+   * Falls back to 'application/octet-stream' if unknown.
+   */
+  private guessContentType(filename: string): string {
+    const ext = filename.toLowerCase().split('.').pop() || '';
+    const mimeTypes: Record<string, string> = {
+      // Images
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'svg': 'image/svg+xml',
+      'ico': 'image/x-icon',
+      'bmp': 'image/bmp',
+      'tiff': 'image/tiff',
+      'tif': 'image/tiff',
+      // Documents
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'odt': 'application/vnd.oasis.opendocument.text',
+      'ods': 'application/vnd.oasis.opendocument.spreadsheet',
+      'odp': 'application/vnd.oasis.opendocument.presentation',
+      // Text
+      'txt': 'text/plain',
+      'csv': 'text/csv',
+      'json': 'application/json',
+      'xml': 'application/xml',
+      'html': 'text/html',
+      'htm': 'text/html',
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'md': 'text/markdown',
+      // Archives
+      'zip': 'application/zip',
+      'rar': 'application/vnd.rar',
+      '7z': 'application/x-7z-compressed',
+      'tar': 'application/x-tar',
+      'gz': 'application/gzip',
+      // Audio
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'ogg': 'audio/ogg',
+      'm4a': 'audio/mp4',
+      'flac': 'audio/flac',
+      // Video
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+      'avi': 'video/x-msvideo',
+      'mov': 'video/quicktime',
+      'mkv': 'video/x-matroska',
+    };
+
+    return mimeTypes[ext] || 'application/octet-stream';
+  }
 }
