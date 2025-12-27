@@ -1,4 +1,5 @@
 // Mock storage clients (S3 and GCS)
+import { jest } from '@jest/globals';
 
 export const mockS3UploadResult = {
   url: 'https://bucket.s3.amazonaws.com/attachments/12345-test.pdf',
