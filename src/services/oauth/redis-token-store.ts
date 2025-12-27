@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import Redis from 'ioredis';
 import { TokenSet, TokenStore, AuthorizationRequest } from './types.js';

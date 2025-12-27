@@ -65,7 +65,7 @@ export function sanitizeFilename(filename: string): string {
 
   // Remove path separators and other dangerous characters
   return filename
-    .replace(/[\/\\]/g, '_')           // Replace slashes with underscores
+    .replace(/[/\\]/g, '_')            // Replace slashes with underscores
     .replace(/\.{2,}/g, '_')           // Replace multiple dots with underscore
     .replace(/[^\w\s.-]/g, '_')        // Keep only alphanumeric, spaces, dots, hyphens
     .replace(/^\.+/, '')               // Remove leading dots

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import { Router } from 'express';
 import { getOAuthService, OAuthError } from '../services/oauth/index.js';

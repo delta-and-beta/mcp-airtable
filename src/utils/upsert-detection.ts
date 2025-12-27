@@ -113,7 +113,8 @@ export function detectUpsertFields(
 
   // Sort fields by score and select the best candidates
   const scoredFields = Object.entries(fieldAnalysis)
-    .filter(([_, analysis]) => !analysis.hasNulls && analysis.score > 0)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    .filter(([_fieldName, analysis]) => !analysis.hasNulls && analysis.score > 0)
     .sort((a, b) => b[1].score - a[1].score)
     .map(([fieldName, analysis]) => ({
       fieldName,
@@ -182,7 +183,8 @@ export function validateUpsertFields(
   });
 
   const duplicates = Array.from(valueMap.entries())
-    .filter(([_, count]) => count > 1);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    .filter(([_value, count]) => count > 1);
 
   if (duplicates.length > 0) {
     logger.warn('Duplicate values found for upsert fields', { 
