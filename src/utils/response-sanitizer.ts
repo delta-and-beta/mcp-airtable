@@ -10,6 +10,7 @@ export function sanitizeResponse(data: any): any {
   // Handle strings - ensure they're properly encoded
   if (typeof data === 'string') {
     // Replace any control characters that might cause issues
+    // eslint-disable-next-line no-control-regex
     return data.replace(/[\x00-\x1F\x7F-\x9F]/g, (char) => {
       // Keep newlines, tabs, and carriage returns
       if (char === '\n' || char === '\r' || char === '\t') {
