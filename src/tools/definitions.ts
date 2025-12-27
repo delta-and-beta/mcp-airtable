@@ -532,4 +532,43 @@ export const toolDefinitions: Tool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'upload_attachment_direct',
+    description: 'Upload a file directly to an Airtable attachment field. This uploads to Airtable\'s content API without requiring external storage (S3/GCS). The record must already exist.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        recordId: {
+          type: 'string',
+          description: 'The ID of the record to attach the file to (must start with "rec")',
+        },
+        fieldIdOrName: {
+          type: 'string',
+          description: 'The ID or name of the attachment field',
+        },
+        filePath: {
+          type: 'string',
+          description: 'Local file path to upload (alternative to base64Data)',
+        },
+        base64Data: {
+          type: 'string',
+          description: 'Base64 encoded file content (alternative to filePath)',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename for the attachment (required when using base64Data, optional for filePath)',
+        },
+        contentType: {
+          type: 'string',
+          description: 'MIME type of the file (auto-detected if not provided)',
+        },
+        baseId: {
+          type: 'string',
+          description: 'The ID of the base (optional if default base is set)',
+        },
+      },
+      required: ['recordId', 'fieldIdOrName'],
+      additionalProperties: false,
+    },
+  },
 ];

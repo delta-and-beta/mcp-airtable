@@ -1,4 +1,5 @@
 // Mock Airtable responses and utilities
+import { jest } from '@jest/globals';
 
 export const mockRecord = (overrides: any = {}) => ({
   id: 'recXXXXXXXXXXXXXX',
