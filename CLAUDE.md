@@ -14,21 +14,42 @@ The codebase follows clean architecture with clear separation of concerns:
 
 ```
 src/
-├── index.ts          # STDIO transport (Claude Desktop)
-├── server.ts         # HTTP transport (Remote deployments)
-├── config/           # Configuration management
-│   ├── index.ts      # Config loader and helpers
-│   └── schema.ts     # Zod validation schemas
-├── tools/            # Tool layer
-│   ├── index.ts      # Tool registry
-│   └── definitions.ts # Tool interface definitions
-├── handlers/         # Business logic
-│   ├── tools.ts      # Original handlers (to be refactored)
-│   └── tools-refactored.ts # Clean implementation
-├── services/         # External services
-│   ├── airtable/     # Airtable API client
-│   └── storage/      # S3/GCS clients
-└── utils/            # Shared utilities
+├── index.ts              # STDIO transport (Claude Desktop)
+├── server.ts             # HTTP transport (Remote deployments)
+├── server-http-streamable.ts  # Streamable HTTP transport
+├── airtable/             # Airtable API client
+│   ├── client.ts         # Main Airtable API client
+│   ├── queued-client.ts  # Queue-based batch operations
+│   └── types.ts          # Airtable type definitions
+├── config/               # Configuration management
+│   ├── index.ts          # Config loader and helpers
+│   └── schema.ts         # Zod validation schemas
+├── tools/                # Tool layer (canonical definitions)
+│   ├── index.ts          # Tool registry - import from here
+│   └── definitions.ts    # Tool interface definitions
+├── handlers/             # Business logic
+│   ├── tools.ts          # Legacy handlers (deprecated)
+│   └── tools-refactored.ts # Clean implementation with Zod validation
+├── routes/               # HTTP routes
+│   └── oauth.ts          # OAuth 2.0 endpoints
+├── services/             # External services
+│   └── oauth/            # OAuth 2.0 token management
+│       ├── index.ts
+│       ├── oauth-service.ts
+│       ├── memory-token-store.ts
+│       └── redis-token-store.ts
+├── s3/                   # AWS S3 storage client
+│   └── client.ts
+├── gcs/                  # Google Cloud Storage client
+│   └── client.ts
+└── utils/                # Shared utilities
+    ├── access-control.ts # Base/table/view ACLs
+    ├── errors.ts         # Error types and formatting
+    ├── logger.ts         # Structured logging
+    ├── rate-limiter-redis.ts  # Rate limiting
+    ├── response-sanitizer.ts  # Response formatting
+    ├── sanitization.ts   # Input sanitization
+    └── validation.ts     # Zod schemas for tools
 ```
 
 ### Key Design Decisions
@@ -156,6 +177,25 @@ try {
 - Implement caching for frequently accessed data
 - Monitor Airtable API rate limits
 - Use queued client for bulk operations
+
+## Available Tools
+
+### Record Operations
+- `list_bases`, `list_tables`, `list_views`, `get_schema`
+- `get_records`, `get_record`, `create_record`, `update_record`, `delete_record`
+- `batch_upsert`, `batch_delete`
+
+### Table/Field Operations
+- `create_table`, `update_table`
+- `create_field`, `update_field`
+
+### File Operations
+- `upload_attachment_direct` - Upload files directly to Airtable's content API
+  - Uses `https://content.airtable.com/v0/{baseId}/{recordId}/{fieldId}/uploadAttachment`
+  - Sends file as base64-encoded JSON payload
+  - Auto-detects MIME type from filename
+  - No external storage required
+- `upload_attachment` - Upload to external storage (S3/GCS) for URL-based attachments
 
 ## Security Checklist
 

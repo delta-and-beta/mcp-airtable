@@ -7,7 +7,7 @@ A Model Context Protocol (MCP) server that provides seamless integration with Ai
 - 🔧 **Full CRUD Operations**: Create, read, update, and delete records
 - 📊 **Schema Inspection**: Explore base and table structures (Enterprise plan required)
 - 🔍 **Advanced Filtering**: Use Airtable formulas for complex queries
-- 📎 **Attachment Support**: Upload files to S3 or Google Cloud Storage
+- 📎 **Attachment Support**: Direct upload to Airtable or external storage (S3/GCS)
 - 🔐 **Secure Authentication**: Token-based API authentication with OAuth 2.0 support
 - ⚡ **Rate Limiting**: Configurable request throttling
 - 🚀 **Batch Operations**: Efficient bulk record operations
@@ -221,7 +221,8 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 
 ### File Operations
 
-- `upload_attachment` - Upload files for attachment fields
+- `upload_attachment_direct` - Upload files directly to Airtable attachment fields (no external storage required)
+- `upload_attachment` - Upload files to external storage (S3/GCS) and get URL for attachment fields
 
 ## Examples
 
@@ -362,7 +363,39 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 }
 ```
 
-### Upload an attachment
+### Upload an attachment directly to Airtable
+
+Upload a file directly to an attachment field without external storage:
+
+```json
+{
+  "tool": "upload_attachment_direct",
+  "arguments": {
+    "recordId": "recXXXXXXXXXXXXXX",
+    "fieldIdOrName": "Attachments",
+    "filePath": "/path/to/document.pdf"
+  }
+}
+```
+
+Or upload from base64 data:
+
+```json
+{
+  "tool": "upload_attachment_direct",
+  "arguments": {
+    "recordId": "recXXXXXXXXXXXXXX",
+    "fieldIdOrName": "Attachments",
+    "base64Data": "JVBERi0xLjQK...",
+    "filename": "document.pdf",
+    "contentType": "application/pdf"
+  }
+}
+```
+
+### Upload to external storage (S3/GCS)
+
+Upload a file to cloud storage and get a URL for use with attachment fields:
 
 ```json
 {

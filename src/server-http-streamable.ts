@@ -10,7 +10,7 @@ import { config as loadEnv } from 'dotenv';
 import { validateConfig, config } from './utils/config.js';
 import { logger } from './utils/logger.js';
 import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
-import { toolHandlers, toolDefinitions } from './handlers/tools.js';
+import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 
 // Load environment variables

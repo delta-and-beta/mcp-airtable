@@ -62,34 +62,45 @@ function getS3Client(): S3StorageClient | null {
         publicUrlPrefix: process.env.AWS_S3_PUBLIC_URL_PREFIX,
       });
     } catch (error) {
-      console.error('Failed to initialize S3 client:', error);
+      logger.error('Failed to initialize S3 client', error as Error);
       return null;
     }
   }
   return s3Client;
 }
 
+interface GCSConfig {
+  bucketName: string;
+  projectId?: string;
+  publicUrlPrefix?: string;
+  keyFilename?: string;
+  credentials?: {
+    client_email: string;
+    private_key: string;
+  };
+}
+
 function getGCSClient(): GCSStorageClient | null {
   if (!gcsClient && process.env.GCS_BUCKET) {
     try {
-      const config: any = {
+      const gcsConfig: GCSConfig = {
         bucketName: process.env.GCS_BUCKET,
         projectId: process.env.GCS_PROJECT_ID,
         publicUrlPrefix: process.env.GCS_PUBLIC_URL_PREFIX,
       };
-      
+
       if (process.env.GCS_KEY_FILE) {
-        config.keyFilename = process.env.GCS_KEY_FILE;
+        gcsConfig.keyFilename = process.env.GCS_KEY_FILE;
       } else if (process.env.GCS_CLIENT_EMAIL && process.env.GCS_PRIVATE_KEY) {
-        config.credentials = {
+        gcsConfig.credentials = {
           client_email: process.env.GCS_CLIENT_EMAIL,
           private_key: process.env.GCS_PRIVATE_KEY.replace(/\\n/g, '\n'),
         };
       }
-      
-      gcsClient = new GCSStorageClient(config);
+
+      gcsClient = new GCSStorageClient(gcsConfig);
     } catch (error) {
-      console.error('Failed to initialize GCS client:', error);
+      logger.error('Failed to initialize GCS client', error as Error);
       return null;
     }
   }
