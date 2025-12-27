@@ -288,7 +288,7 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
         });
         break;
 
-      case 'tools/call':
+      case 'tools/call': {
         const { name, arguments: args } = message.params;
         const handler = toolHandlers[name as keyof typeof toolHandlers];
         
@@ -341,6 +341,7 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
           });
         }
         break;
+      }
 
       case 'resources/list':
         res.json({
@@ -386,12 +387,14 @@ app.post('/mcp', authenticate, rateLimitMiddleware(), async (req, res) => {
 });
 
 // Global error handler
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error('Unhandled error', err);
   res.status(500).json(formatErrorResponse(err));
 });
 
 // Graceful shutdown
+// eslint-disable-next-line prefer-const, @typescript-eslint/no-explicit-any
 let server: any;
 
 async function shutdown() {

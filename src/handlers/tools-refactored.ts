@@ -524,7 +524,7 @@ export const toolHandlers = {
         chunks.push(validated.records.slice(i, i + 10));
       }
       
-      for (const _chunk of chunks) {
+      for (let i = 0; i < chunks.length; i++) {
         await airtableRateLimiter.acquire('global');
       }
 
@@ -566,7 +566,7 @@ export const toolHandlers = {
         chunks.push(validated.recordIds.slice(i, i + 10));
       }
 
-      for (const _chunk of chunks) {
+      for (let i = 0; i < chunks.length; i++) {
         await airtableRateLimiter.acquire('global');
       }
 
