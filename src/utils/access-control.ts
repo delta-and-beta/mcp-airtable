@@ -2,7 +2,7 @@
  * Access control utilities for restricting access to bases, tables, and views
  */
 
-import { config } from './config.js';
+import { config } from '../config/index.js';
 import { logger } from './logger.js';
 import { AuthenticationError } from './errors.js';
 
