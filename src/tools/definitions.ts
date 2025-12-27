@@ -1004,85 +1004,6 @@ EXAMPLE:
     },
   },
   {
-    name: 'upload_attachment',
-    description: `Upload a file to cloud storage (S3/GCS) and get a URL for use in Airtable attachment fields.
-
-AUTHENTICATION REQUIRED:
-- airtableApiKey: Your Airtable Personal Access Token
-
-PREREQUISITES:
-- S3 or GCS storage must be configured on the MCP server
-- If not configured, use upload_attachment_direct instead
-
-WORKFLOW:
-1. Upload file with this tool to get a public URL
-2. Use the URL in create_record or update_record:
-   "Attachments": [{"url": "https://your-storage.com/file.pdf"}]
-
-PROVIDE ONE OF:
-- filePath: Path to a file the server can read
-- base64Data + filename: Base64-encoded file content
-
-COMMON MIME TYPES (contentType):
-- Text: "text/plain", "text/csv"
-- Images: "image/png", "image/jpeg", "image/gif"
-- Documents: "application/pdf", "application/json"
-
-RETURNS:
-{
-  "url": "https://your-bucket.s3.amazonaws.com/uploads/uuid/filename.pdf",
-  "filename": "document.pdf",
-  "contentType": "application/pdf",
-  "size": 12345
-}
-
-EXAMPLE with base64:
-{
-  "airtableApiKey": "patXXX.XXXXX",
-  "base64Data": "JVBERi0xLjQK...",
-  "filename": "report.pdf",
-  "contentType": "application/pdf"
-}
-
-EXAMPLE with file path:
-{
-  "airtableApiKey": "patXXX.XXXXX",
-  "filePath": "/path/to/document.pdf"
-}`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        airtableApiKey: {
-          type: 'string',
-          description: 'Airtable Personal Access Token. REQUIRED.',
-        },
-        filePath: {
-          type: 'string',
-          description: 'Local file path. Server must have read access.',
-        },
-        base64Data: {
-          type: 'string',
-          description: 'Base64-encoded file content. Use with filename.',
-        },
-        filename: {
-          type: 'string',
-          description: 'Filename for the upload. REQUIRED when using base64Data.',
-        },
-        contentType: {
-          type: 'string',
-          description: 'MIME type (e.g., "image/png", "application/pdf"). Auto-detected if not provided.',
-        },
-        storageProvider: {
-          type: 'string',
-          enum: ['s3', 'gcs'],
-          description: 'Storage provider. Uses server default if not specified.',
-        },
-      },
-      required: ['airtableApiKey'],
-      additionalProperties: false,
-    },
-  },
-  {
     name: 'batch_upsert',
     description: `Create or update multiple records in a single operation (up to 1000 records).
 
@@ -1267,16 +1188,11 @@ EXAMPLE:
     },
   },
   {
-    name: 'upload_attachment_direct',
-    description: `Upload a file directly to an Airtable attachment field (no external storage required).
+    name: 'upload_attachment',
+    description: `Upload a file directly to an Airtable attachment field.
 
 AUTHENTICATION REQUIRED:
 - airtableApiKey: Your Airtable Personal Access Token
-
-ADVANTAGES:
-- No S3/GCS configuration needed
-- Files stored directly in Airtable
-- Simpler workflow than upload_attachment
 
 REQUIREMENTS:
 - The target record MUST already exist (create with create_record first)

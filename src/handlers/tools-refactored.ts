@@ -1,5 +1,4 @@
 import { AirtableClient } from '../airtable/client.js';
-import { S3StorageClient } from '../s3/client.js';
 import { config } from '../config/index.js';
 import { airtableRateLimiter } from '../utils/rate-limiter-redis.js';
 import { AirtableError } from '../utils/errors.js';
@@ -23,7 +22,6 @@ import {
   UpdateRecordSchema,
   DeleteRecordSchema,
   GetSchemaSchema,
-  UploadAttachmentSchema,
   UploadAttachmentDirectSchema,
   BatchUpsertSchema,
   BatchDeleteSchema,
@@ -38,7 +36,6 @@ import type { FieldSet } from 'airtable';
 
 // Client cache for reusing connections
 const clientCache = new Map<string, AirtableClient>();
-let s3Client: S3StorageClient | null = null;
 
 // Type definitions for handler inputs
 interface AuthOptions {
@@ -118,23 +115,6 @@ async function getAirtableClient(options: AuthOptions): Promise<AirtableClient> 
   }
   
   return clientCache.get(cacheKey)!;
-}
-
-function getS3Client(): S3StorageClient {
-  if (!s3Client) {
-    if (!config.AWS_S3_BUCKET) {
-      throw new Error('S3 is not configured. Please set AWS_S3_BUCKET environment variable.');
-    }
-    
-    s3Client = new S3StorageClient({
-      region: config.AWS_REGION,
-      bucketName: config.AWS_S3_BUCKET,
-      accessKeyId: config.AWS_ACCESS_KEY_ID,
-      secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
-      publicUrlPrefix: config.AWS_S3_PUBLIC_URL_PREFIX,
-    });
-  }
-  return s3Client;
 }
 
 // Extract auth options from validated input
@@ -443,44 +423,6 @@ export const toolHandlers = {
     });
   },
 
-  upload_attachment: async (args: unknown) => {
-    const validated = validateInput(UploadAttachmentSchema, args);
-    
-    return withErrorHandling(async () => {
-      const s3 = getS3Client();
-      
-      if (validated.filePath) {
-        const result = await s3.uploadFile(validated.filePath, {
-          contentType: validated.contentType,
-        });
-        
-        return {
-          url: result.url,
-          filename: validated.filename || result.key.split('/').pop() || 'unknown',
-          size: result.size,
-          type: result.contentType,
-        };
-      } else if (validated.base64Data && validated.filename) {
-        const buffer = Buffer.from(validated.base64Data, 'base64');
-        const key = `attachments/${Date.now()}-${validated.filename}`;
-        
-        const result = await s3.uploadBuffer(buffer, {
-          key,
-          contentType: validated.contentType,
-        });
-        
-        return {
-          url: result.url,
-          filename: validated.filename,
-          size: result.size,
-          type: result.contentType,
-        };
-      }
-      
-      throw new Error('Invalid upload parameters');
-    });
-  },
-
   batch_upsert: async (args: unknown) => {
     const validated = validateInput(BatchUpsertSchema, args);
 
@@ -576,7 +518,7 @@ export const toolHandlers = {
     });
   },
 
-  upload_attachment_direct: async (args: unknown) => {
+  upload_attachment: async (args: unknown) => {
     const validated = validateInput(UploadAttachmentDirectSchema, args);
     await airtableRateLimiter.acquire('global');
 
