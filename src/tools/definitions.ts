@@ -729,34 +729,57 @@ EXAMPLE:
 REQUIREMENTS:
 - The record MUST already exist (use create_record first if needed)
 - The field MUST be an attachment type field
+- You MUST provide contentType (MIME type) for reliable uploads
 
 WORKFLOW:
 1. Create or identify the target record (get its recordId)
-2. Call this tool with the recordId, field name, and file content
+2. Call this tool with recordId, field name, file content, AND contentType
 3. The file is uploaded directly to Airtable's storage
 
-PROVIDE ONE OF:
-- filePath: Local file path (server must have access)
-- base64Data + filename: Base64-encoded file content
+REQUIRED PARAMETERS:
+- baseId: The base ID (starts with "app")
+- recordId: The record to attach to (starts with "rec")
+- fieldIdOrName: The attachment field name or ID
+- contentType: MIME type of the file (see common types below)
+- EITHER filePath OR (base64Data + filename)
 
-EXAMPLE:
+COMMON MIME TYPES (contentType):
+- Text: "text/plain", "text/csv", "text/html"
+- Images: "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"
+- Documents: "application/pdf", "application/json"
+- Office: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (xlsx)
+- Audio: "audio/mpeg" (mp3), "audio/wav"
+- Video: "video/mp4", "video/webm"
+
+EXAMPLE - Upload a text file:
 {
-  "baseId": "appABC123",
-  "recordId": "recXYZ789",
+  "baseId": "appABC123def456",
+  "recordId": "recXYZ789abc012",
   "fieldIdOrName": "Attachments",
-  "base64Data": "SGVsbG8gV29ybGQ=",
-  "filename": "document.txt"
+  "base64Data": "SGVsbG8gV29ybGQh",
+  "filename": "hello.txt",
+  "contentType": "text/plain"
+}
+
+EXAMPLE - Upload a PNG image:
+{
+  "baseId": "appABC123def456",
+  "recordId": "recXYZ789abc012",
+  "fieldIdOrName": "Photos",
+  "base64Data": "iVBORw0KGgo...",
+  "filename": "screenshot.png",
+  "contentType": "image/png"
 }`,
     inputSchema: {
       type: 'object',
       properties: {
         baseId: {
           type: 'string',
-          description: 'The base ID (starts with "app"). Required.',
+          description: 'The base ID (starts with "app"). REQUIRED.',
         },
         recordId: {
           type: 'string',
-          description: 'The record ID to attach file to (starts with "rec"). Record MUST exist.',
+          description: 'The record ID to attach file to (starts with "rec"). Record MUST already exist.',
         },
         fieldIdOrName: {
           type: 'string',
@@ -764,19 +787,19 @@ EXAMPLE:
         },
         filePath: {
           type: 'string',
-          description: 'Local file path to upload.',
+          description: 'Local file path to upload. Use this OR base64Data, not both.',
         },
         base64Data: {
           type: 'string',
-          description: 'Base64-encoded file content. Use with filename.',
+          description: 'Base64-encoded file content. MUST be used with filename and contentType.',
         },
         filename: {
           type: 'string',
-          description: 'Filename for the attachment. REQUIRED when using base64Data.',
+          description: 'Filename for the attachment (e.g., "report.pdf"). REQUIRED when using base64Data.',
         },
         contentType: {
           type: 'string',
-          description: 'MIME type. Auto-detected from filename if not provided.',
+          description: 'MIME type of the file. REQUIRED for reliable uploads. Examples: "text/plain", "image/png", "application/pdf", "image/jpeg".',
         },
       },
       required: ['recordId', 'fieldIdOrName', 'baseId'],
