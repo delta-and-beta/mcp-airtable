@@ -25,7 +25,11 @@ const createMockResponse = (data: unknown, ok = true): Response => ({
   bytes: async () => new Uint8Array(),
 } as Response);
 
-// Mock data
+// Test API key - handlers require this for authentication (field name is airtableApiKey)
+const TEST_API_KEY = 'patXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+const AUTH_ARGS = { airtableApiKey: TEST_API_KEY };
+
+// Mock data with valid ID formats (17 characters for base/table IDs)
 const mockBase = {
   id: 'appXXXXXXXXXXXXXX',
   name: 'Test Base',
@@ -45,8 +49,11 @@ const mockTable = {
   ],
 };
 
+// Valid test base ID (17 chars, starts with "app")
+const TEST_BASE_ID = 'appXXXXXXXXXXXXXX';
+
 // Import handlers after setting up mocks
-const { toolHandlers } = await import('../../handlers/tools.js');
+const { toolHandlers } = await import('../../handlers/tools-refactored.js');
 
 describe('Tool Handlers', () => {
   mockEnv();
@@ -68,7 +75,7 @@ describe('Tool Handlers', () => {
         bases: [mockBase],
       }));
 
-      const result = await toolHandlers.list_bases({});
+      const result = await toolHandlers.list_bases(AUTH_ARGS);
 
       expect(mockFetch).toHaveBeenCalledWith(
         'https://api.airtable.com/v0/meta/bases',
@@ -88,7 +95,7 @@ describe('Tool Handlers', () => {
       ));
 
       await expectToThrowAsync(
-        () => toolHandlers.list_bases({}),
+        () => toolHandlers.list_bases(AUTH_ARGS),
         /List bases failed|Unauthorized/
       );
     });
@@ -100,10 +107,13 @@ describe('Tool Handlers', () => {
         tables: [mockTable],
       }));
 
-      const result = await toolHandlers.list_tables({ baseId: 'appTest' });
+      const result = await toolHandlers.list_tables({
+        ...AUTH_ARGS,
+        baseId: TEST_BASE_ID,
+      });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.airtable.com/v0/meta/bases/appTest/tables',
+        `https://api.airtable.com/v0/meta/bases/${TEST_BASE_ID}/tables`,
         expect.any(Object)
       );
       // Note: listTables strips fields by default for smaller response
@@ -120,7 +130,7 @@ describe('Tool Handlers', () => {
         tables: [mockTable],
       }));
 
-      await toolHandlers.list_tables({});
+      await toolHandlers.list_tables(AUTH_ARGS);
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/meta/bases/'),
@@ -136,8 +146,9 @@ describe('Tool Handlers', () => {
       }));
 
       const result = await toolHandlers.list_views({
+        ...AUTH_ARGS,
         tableName: 'Test Table',
-        baseId: 'appTest'
+        baseId: TEST_BASE_ID,
       });
 
       expect(result).toEqual({
@@ -155,7 +166,10 @@ describe('Tool Handlers', () => {
       }));
 
       await expectToThrowAsync(
-        () => toolHandlers.list_views({ tableName: 'NonExistent' }),
+        () => toolHandlers.list_views({
+          ...AUTH_ARGS,
+          tableName: 'NonExistent',
+        }),
         "Table 'NonExistent' not found"
       );
     });
@@ -167,10 +181,13 @@ describe('Tool Handlers', () => {
         tables: [mockTable],
       }));
 
-      const result = await toolHandlers.get_schema({ baseId: 'appTest' });
+      const result = await toolHandlers.get_schema({
+        ...AUTH_ARGS,
+        baseId: TEST_BASE_ID,
+      });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.airtable.com/v0/meta/bases/appTest',
+        `https://api.airtable.com/v0/meta/bases/${TEST_BASE_ID}`,
         expect.any(Object)
       );
       expect(result).toEqual({ tables: [mockTable] });
@@ -180,7 +197,7 @@ describe('Tool Handlers', () => {
   describe('input validation', () => {
     it('should throw error for missing table name in get_records', async () => {
       await expectToThrowAsync(
-        () => toolHandlers.get_records({}),
+        () => toolHandlers.get_records(AUTH_ARGS),
         /Table name or table ID is required|tableName/
       );
     });
@@ -192,7 +209,10 @@ describe('Tool Handlers', () => {
       }));
 
       await expectToThrowAsync(
-        () => toolHandlers.list_views({ tableName: 'NonExistent' }),
+        () => toolHandlers.list_views({
+          ...AUTH_ARGS,
+          tableName: 'NonExistent',
+        }),
         /Table.*not found/
       );
     });
