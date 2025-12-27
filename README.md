@@ -221,8 +221,7 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 
 ### File Operations
 
-- `upload_attachment_direct` - Upload files directly to Airtable attachment fields (no external storage required)
-- `upload_attachment` - Upload files to external storage (S3/GCS) and get URL for attachment fields
+- `upload_attachment` - Upload files directly to Airtable attachment fields
 
 ## Examples
 
@@ -363,17 +362,19 @@ The HTTP server exposes a `/mcp` endpoint for MCP protocol communication.
 }
 ```
 
-### Upload an attachment directly to Airtable
+### Upload an attachment to Airtable
 
-Upload a file directly to an attachment field without external storage:
+Upload a file to an attachment field:
 
 ```json
 {
-  "tool": "upload_attachment_direct",
+  "tool": "upload_attachment",
   "arguments": {
+    "baseId": "appXXXXXXXXXXXXXX",
     "recordId": "recXXXXXXXXXXXXXX",
     "fieldIdOrName": "Attachments",
-    "filePath": "/path/to/document.pdf"
+    "filePath": "/path/to/document.pdf",
+    "contentType": "application/pdf"
   }
 }
 ```
@@ -382,27 +383,14 @@ Or upload from base64 data:
 
 ```json
 {
-  "tool": "upload_attachment_direct",
+  "tool": "upload_attachment",
   "arguments": {
+    "baseId": "appXXXXXXXXXXXXXX",
     "recordId": "recXXXXXXXXXXXXXX",
     "fieldIdOrName": "Attachments",
     "base64Data": "JVBERi0xLjQK...",
     "filename": "document.pdf",
     "contentType": "application/pdf"
-  }
-}
-```
-
-### Upload to external storage (S3/GCS)
-
-Upload a file to cloud storage and get a URL for use with attachment fields:
-
-```json
-{
-  "tool": "upload_attachment",
-  "arguments": {
-    "filePath": "/path/to/file.pdf",
-    "storageProvider": "s3"
   }
 }
 ```
