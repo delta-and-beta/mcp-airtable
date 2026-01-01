@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
@@ -8,11 +9,12 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { config as loadEnv } from 'dotenv';
 import { validateConfig, config } from './config/index.js';
-import { logger } from './utils/logger.js';
+import { logger, requestLogger } from './utils/logger.js';
 import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
 import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
 import { extractRequestContext } from './utils/request-context.js';
+import { rateLimitMiddleware } from './utils/rate-limiter-redis.js';
 
 // Load environment variables
 loadEnv();
@@ -20,12 +22,22 @@ validateConfig();
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true,
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for API server
 }));
+
+// CORS middleware
+app.use(cors({
+  origin: config.CORS_ORIGIN?.split(',') || '*',
+  credentials: !!config.CORS_ORIGIN, // Only allow credentials with explicit origins
+}));
+
+// Request parsing
 app.use(express.json({ limit: '10mb' }));
+
+// Request logging
+app.use(requestLogger);
 
 // Health check
 app.get('/health', async (_req, res) => {
@@ -125,7 +137,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 // HTTP Streamable endpoint for n8n
-app.post('/stream', authenticate, async (req, res) => {
+app.post('/stream', authenticate, rateLimitMiddleware(), async (req, res) => {
   const message = req.body;
   
   logger.debug('HTTP Streamable request', { 
@@ -236,7 +248,7 @@ app.post('/stream', authenticate, async (req, res) => {
 });
 
 // n8n-specific streamable endpoint with token in path
-app.post('/stream/n8n/:token', async (req, res) => {
+app.post('/stream/n8n/:token', rateLimitMiddleware(), async (req, res) => {
   const { token } = req.params;
   
   // Validate token

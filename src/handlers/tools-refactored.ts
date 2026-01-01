@@ -17,6 +17,7 @@ import {
   validateFilePath,
   sanitizeFilename,
 } from '../utils/sanitization.js';
+import { schemaCache, cacheKey } from '../utils/schema-cache.js';
 import {
   validateInput,
   ListBasesSchema,
@@ -178,8 +179,25 @@ export const toolHandlers = {
     }
 
     return withErrorHandling(async () => {
+      // Check cache first (only for non-includeFields requests to keep cache simple)
+      const baseId = validated.baseId || validated.airtableBaseId;
+      if (baseId && !validated.includeFields) {
+        const cached = await schemaCache.get<{ tables: Array<{ id: string; name: string }> }>(
+          cacheKey('tables', baseId)
+        );
+        if (cached) {
+          return { tables: filterTables(cached.tables || []) };
+        }
+      }
+
       const client = await getAirtableClient(extractAuthOptions(validated));
       const result = await client.listTables(validated.baseId, validated.includeFields) as { tables?: Array<{ id: string; name: string }> };
+
+      // Cache the result if we have a baseId
+      if (baseId && !validated.includeFields) {
+        await schemaCache.set(cacheKey('tables', baseId), result);
+      }
+
       // Filter tables based on access control
       return { tables: filterTables(result.tables || []) };
     });
@@ -430,8 +448,24 @@ export const toolHandlers = {
     }
 
     return withErrorHandling(async () => {
+      // Check cache first
+      const baseId = validated.baseId || validated.airtableBaseId;
+      if (baseId) {
+        const cached = await schemaCache.get(cacheKey('schema', baseId));
+        if (cached) {
+          return cached;
+        }
+      }
+
       const client = await getAirtableClient(extractAuthOptions(validated));
-      return await client.getSchema(validated.baseId);
+      const result = await client.getSchema(validated.baseId);
+
+      // Cache the result
+      if (baseId) {
+        await schemaCache.set(cacheKey('schema', baseId), result);
+      }
+
+      return result;
     });
   },
 

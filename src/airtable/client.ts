@@ -1,6 +1,7 @@
 import Airtable from 'airtable';
 import type { FieldSet } from 'airtable';
 import { AirtableError } from '../utils/errors.js';
+import { withRetryOnRateLimit } from '../utils/retry-with-backoff.js';
 
 export interface AirtableConfig {
   apiKey: string;
@@ -111,53 +112,63 @@ export class AirtableClient {
   }
 
   async listBases() {
-    const response = await fetch('https://api.airtable.com/v0/meta/bases', {
-      headers: this.getAuthHeaders(),
-    });
+    return withRetryOnRateLimit(
+      async () => {
+        const response = await fetch('https://api.airtable.com/v0/meta/bases', {
+          headers: this.getAuthHeaders(),
+        });
 
-    if (!response.ok) {
-      await this.parseApiError(response, 'List bases');
-    }
+        if (!response.ok) {
+          await this.parseApiError(response, 'List bases');
+        }
 
-    return response.json();
+        return response.json();
+      },
+      { context: { operation: 'listBases' } }
+    );
   }
 
   async listTables(baseId?: string, includeFields: boolean = false) {
-    const response = await fetch(
-      `https://api.airtable.com/v0/meta/bases/${baseId || this.defaultBaseId}/tables`,
-      {
-        headers: {
-          ...this.getAuthHeaders(),
-        },
-      }
+    return withRetryOnRateLimit(
+      async () => {
+        const response = await fetch(
+          `https://api.airtable.com/v0/meta/bases/${baseId || this.defaultBaseId}/tables`,
+          {
+            headers: {
+              ...this.getAuthHeaders(),
+            },
+          }
+        );
+
+        if (!response.ok) {
+          await this.parseApiError(response, 'List tables');
+        }
+
+        const data: any = await response.json();
+
+        // If includeFields is false, strip out field definitions to reduce response size
+        if (!includeFields && data.tables) {
+          return {
+            ...data,
+            tables: data.tables.map((table: any) => ({
+              id: table.id,
+              name: table.name,
+              description: table.description,
+              primaryFieldId: table.primaryFieldId,
+              views: table.views?.map((view: any) => ({
+                id: view.id,
+                name: view.name,
+                type: view.type,
+              })) || [],
+              // Omit fields array to reduce token count
+            })),
+          };
+        }
+
+        return data;
+      },
+      { context: { operation: 'listTables', baseId } }
     );
-
-    if (!response.ok) {
-      await this.parseApiError(response, 'List tables');
-    }
-
-    const data: any = await response.json();
-    
-    // If includeFields is false, strip out field definitions to reduce response size
-    if (!includeFields && data.tables) {
-      return {
-        ...data,
-        tables: data.tables.map((table: any) => ({
-          id: table.id,
-          name: table.name,
-          description: table.description,
-          primaryFieldId: table.primaryFieldId,
-          views: table.views?.map((view: any) => ({
-            id: view.id,
-            name: view.name,
-            type: view.type,
-          })) || [],
-          // Omit fields array to reduce token count
-        })),
-      };
-    }
-
-    return data;
   }
 
   async listViews(tableName: string, baseId?: string) {
