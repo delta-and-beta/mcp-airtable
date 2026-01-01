@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Airtable Server | Delta & Beta</title>
+    <meta name="description" content="Model Context Protocol server for seamless Airtable integration. Enable AI assistants to interact with Airtable databases.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-card: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --border: #2a2a2a;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            padding: 1rem 2rem;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--text-primary);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--text-muted);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 1.5rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        /* Feature Cards */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+        }
+
+        .feature-card .number {
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.875rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .code-block .keyword { color: #c084fc; }
+        .code-block .string { color: #22c55e; }
+        .code-block .comment { color: var(--text-muted); }
+
+        /* Auth Methods */
+        .auth-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .auth-card .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--accent);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+        }
+
+        .auth-card h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .auth-card code {
+            display: block;
+            background: var(--bg-primary);
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            overflow-x: auto;
+        }
+
+        /* Tools Grid */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .tool-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .tool-item:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .tool-item .category {
+            font-size: 0.625rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+        }
+
+        /* Docs Links */
+        .docs-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .docs-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .docs-link:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .docs-link .icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .docs-link .content h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .docs-link .content p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--text-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            header {
+                padding: 1rem;
+            }
+
+            nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="https://www.delta-and-beta.com" class="logo">
+                <span>&Delta;</span> & <span>&beta;</span>
+            </a>
+            <nav>
+                <a href="https://github.com/delta-and-beta/mcp-airtable">GitHub</a>
+                <a href="guides/getting-started.md">Guides</a>
+                <a href="OAUTH_GUIDE.md">OAuth</a>
+                <a href="https://www.delta-and-beta.com">Delta & Beta</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="hero">
+        <h1>MCP <span>Airtable</span> Server</h1>
+        <p>Model Context Protocol server enabling AI assistants to seamlessly interact with Airtable databases through a standardized interface.</p>
+        <div class="cta-buttons">
+            <a href="https://github.com/delta-and-beta/mcp-airtable" class="btn btn-primary">
+                View on GitHub
+            </a>
+            <a href="guides/getting-started.md" class="btn btn-secondary">
+                Documentation
+            </a>
+        </div>
+    </div>
+
+    <main>
+        <section>
+            <h2>Features</h2>
+            <div class="features">
+                <div class="feature-card">
+                    <div class="number">01</div>
+                    <h3>Full CRUD Operations</h3>
+                    <p>Create, read, update, and delete records with complete Airtable API coverage.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="number">02</div>
+                    <h3>Schema Inspection</h3>
+                    <p>Explore base and table structures programmatically (Enterprise plan).</p>
+                </div>
+                <div class="feature-card">
+                    <div class="number">03</div>
+                    <h3>Advanced Filtering</h3>
+                    <p>Use Airtable formulas for complex queries and data retrieval.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="number">04</div>
+                    <h3>Batch Operations</h3>
+                    <p>Efficient bulk record operations for high-performance workflows.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="number">05</div>
+                    <h3>OAuth 2.0 Support</h3>
+                    <p>Modern authentication with automatic token refresh capabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="number">06</div>
+                    <h3>Attachment Upload</h3>
+                    <p>Direct file uploads to Airtable or external storage (S3/GCS).</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Quick Start</h2>
+            <div class="code-block">
+                <pre><span class="comment">// Claude Desktop Configuration</span>
+{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"airtable"</span>: {
+      <span class="string">"command"</span>: <span class="string">"npx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"mcp-airtable"</span>],
+      <span class="string">"env"</span>: {
+        <span class="string">"AIRTABLE_API_KEY"</span>: <span class="string">"your_api_key_here"</span>
+      }
+    }
+  }
+}</pre>
+            </div>
+        </section>
+
+        <section>
+            <h2>Authentication Methods</h2>
+            <div class="auth-methods">
+                <div class="auth-card">
+                    <div class="badge">Priority 1</div>
+                    <h3>Tool Parameter</h3>
+                    <p>Pass the API key directly in tool arguments.</p>
+                    <code>{ "airtableApiKey": "patXXX..." }</code>
+                </div>
+                <div class="auth-card">
+                    <div class="badge">Priority 2</div>
+                    <h3>HTTP Headers</h3>
+                    <p>Use headers for remote MCP server deployments.</p>
+                    <code>x-airtable-api-key: patXXX...<br>Authorization: Bearer patXXX...</code>
+                </div>
+                <div class="auth-card">
+                    <div class="badge">Priority 3</div>
+                    <h3>Environment Variable</h3>
+                    <p>Set in your environment for local STDIO transport.</p>
+                    <code>AIRTABLE_API_KEY=patXXX...</code>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Available Tools</h2>
+            <div class="tools-grid">
+                <div class="tool-item">
+                    <div class="category">Base</div>
+                    list_bases
+                </div>
+                <div class="tool-item">
+                    <div class="category">Base</div>
+                    get_schema
+                </div>
+                <div class="tool-item">
+                    <div class="category">Table</div>
+                    list_tables
+                </div>
+                <div class="tool-item">
+                    <div class="category">Table</div>
+                    create_table
+                </div>
+                <div class="tool-item">
+                    <div class="category">Table</div>
+                    update_table
+                </div>
+                <div class="tool-item">
+                    <div class="category">Field</div>
+                    create_field
+                </div>
+                <div class="tool-item">
+                    <div class="category">Field</div>
+                    update_field
+                </div>
+                <div class="tool-item">
+                    <div class="category">View</div>
+                    list_views
+                </div>
+                <div class="tool-item">
+                    <div class="category">Record</div>
+                    get_records
+                </div>
+                <div class="tool-item">
+                    <div class="category">Record</div>
+                    get_record
+                </div>
+                <div class="tool-item">
+                    <div class="category">Record</div>
+                    create_record
+                </div>
+                <div class="tool-item">
+                    <div class="category">Record</div>
+                    update_record
+                </div>
+                <div class="tool-item">
+                    <div class="category">Record</div>
+                    delete_record
+                </div>
+                <div class="tool-item">
+                    <div class="category">Batch</div>
+                    batch_upsert
+                </div>
+                <div class="tool-item">
+                    <div class="category">Batch</div>
+                    batch_delete
+                </div>
+                <div class="tool-item">
+                    <div class="category">File</div>
+                    upload_attachment
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Documentation</h2>
+            <div class="docs-links">
+                <a href="guides/getting-started.md" class="docs-link">
+                    <div class="icon">&#128640;</div>
+                    <div class="content">
+                        <h4>Getting Started</h4>
+                        <p>Quick setup guide for new users</p>
+                    </div>
+                </a>
+                <a href="guides/configuration.md" class="docs-link">
+                    <div class="icon">&#9881;</div>
+                    <div class="content">
+                        <h4>Configuration</h4>
+                        <p>Environment variables and options</p>
+                    </div>
+                </a>
+                <a href="OAUTH_GUIDE.md" class="docs-link">
+                    <div class="icon">&#128274;</div>
+                    <div class="content">
+                        <h4>OAuth 2.0 Setup</h4>
+                        <p>Modern authentication guide</p>
+                    </div>
+                </a>
+                <a href="mcp-remote-setup.md" class="docs-link">
+                    <div class="icon">&#127760;</div>
+                    <div class="content">
+                        <h4>Remote Server Setup</h4>
+                        <p>Deploy and connect remotely</p>
+                    </div>
+                </a>
+                <a href="guides/security.md" class="docs-link">
+                    <div class="icon">&#128737;</div>
+                    <div class="content">
+                        <h4>Security Best Practices</h4>
+                        <p>Access control and rate limiting</p>
+                    </div>
+                </a>
+                <a href="guides/troubleshooting.md" class="docs-link">
+                    <div class="icon">&#128269;</div>
+                    <div class="content">
+                        <h4>Troubleshooting</h4>
+                        <p>Common issues and solutions</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            Built by <a href="https://www.delta-and-beta.com">Delta & Beta</a> |
+            <a href="https://github.com/delta-and-beta/mcp-airtable">GitHub</a> |
+            MIT License
+        </p>
+    </footer>
+</body>
+</html>
