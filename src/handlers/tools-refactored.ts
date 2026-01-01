@@ -12,6 +12,12 @@ import {
   filterTables,
 } from '../utils/access-control.js';
 import {
+  sanitizeFormula,
+  sanitizeBase64,
+  validateFilePath,
+  sanitizeFilename,
+} from '../utils/sanitization.js';
+import {
   validateInput,
   ListBasesSchema,
   ListTablesSchema,
@@ -316,11 +322,17 @@ export const toolHandlers = {
 
     return withErrorHandling(async () => {
       const client = await getAirtableClient(extractAuthOptions(validated));
+
+      // Sanitize formula to prevent injection attacks
+      const sanitizedFormula = validated.filterByFormula
+        ? sanitizeFormula(validated.filterByFormula)
+        : undefined;
+
       return await client.getRecords(validated.tableName, {
         baseId: validated.baseId,
         view: validated.view,
         maxRecords: validated.maxRecords,
-        filterByFormula: validated.filterByFormula,
+        filterByFormula: sanitizedFormula,
         sort: validated.sort,
         fields: validated.fields,
       });
@@ -534,13 +546,19 @@ export const toolHandlers = {
       let filename: string;
 
       if (validated.filePath) {
+        // Validate file path to prevent traversal attacks
+        const safePath = validateFilePath(validated.filePath);
         // Read file from disk
-        content = await readFile(validated.filePath);
-        filename = validated.filename || basename(validated.filePath);
+        content = await readFile(safePath);
+        // Sanitize filename to prevent injection
+        filename = sanitizeFilename(validated.filename || basename(safePath));
       } else if (validated.base64Data && validated.filename) {
+        // Sanitize and validate base64 data (includes size limit check)
+        const sanitizedBase64 = sanitizeBase64(validated.base64Data);
         // Decode base64 data
-        content = Buffer.from(validated.base64Data, 'base64');
-        filename = validated.filename;
+        content = Buffer.from(sanitizedBase64, 'base64');
+        // Sanitize filename to prevent injection
+        filename = sanitizeFilename(validated.filename);
       } else {
         throw new Error('Either filePath or (base64Data + filename) must be provided');
       }

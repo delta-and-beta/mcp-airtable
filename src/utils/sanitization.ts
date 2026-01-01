@@ -2,6 +2,58 @@ import path from 'path';
 import { ValidationError } from './errors.js';
 
 /**
+ * Validate file path to prevent path traversal attacks.
+ * Only allows paths within safe directories.
+ */
+export function validateFilePath(filePath: string): string {
+  if (!filePath) {
+    throw new ValidationError('File path cannot be empty');
+  }
+
+  // Normalize the path to resolve any .. or . components
+  const normalizedPath = path.normalize(filePath);
+
+  // Check for path traversal attempts
+  if (normalizedPath.includes('..')) {
+    throw new ValidationError('Path traversal detected: ".." not allowed in file path');
+  }
+
+  // Block access to sensitive system directories
+  const blockedPaths = [
+    '/etc/',
+    '/var/',
+    '/usr/',
+    '/bin/',
+    '/sbin/',
+    '/root/',
+    '/home/',
+    '/proc/',
+    '/sys/',
+    '/dev/',
+    'C:\\Windows',
+    'C:\\Program Files',
+    'C:\\Users',
+  ];
+
+  const lowerPath = normalizedPath.toLowerCase();
+  for (const blocked of blockedPaths) {
+    if (lowerPath.startsWith(blocked.toLowerCase())) {
+      throw new ValidationError(`Access to system directory not allowed: ${blocked}`);
+    }
+  }
+
+  // Block hidden files and directories (starting with .)
+  const pathParts = normalizedPath.split(path.sep);
+  for (const part of pathParts) {
+    if (part.startsWith('.') && part !== '.' && part !== '..') {
+      throw new ValidationError('Access to hidden files/directories not allowed');
+    }
+  }
+
+  return normalizedPath;
+}
+
+/**
  * Sanitize filename to prevent path traversal and other security issues
  */
 export function sanitizeFilename(filename: string): string {
