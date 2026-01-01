@@ -10,6 +10,10 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
  * 3. Environment variable: AIRTABLE_API_KEY
  * Get your API key from: https://airtable.com/create/tokens
  *
+ * SECURITY NOTE: For production use, prefer HTTP header authentication (method 2)
+ * over tool parameters (method 1) to avoid API keys being logged in MCP client
+ * request logs or stored in conversation history.
+ *
  * ID FORMATS:
  * - Base ID: starts with "app" (17 chars), e.g., "appABC123def456gh"
  * - Table ID: starts with "tbl" (17 chars), e.g., "tblXYZ789abc012de"
