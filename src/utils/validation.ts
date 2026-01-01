@@ -6,7 +6,11 @@ const TableNameSchema = z.string().min(1).max(255);
 const RecordIdSchema = z.string().regex(/^rec[a-zA-Z0-9]{14}$/, 'Invalid record ID format');
 const ViewSchema = z.string().min(1);
 const FilePathSchema = z.string().min(1);
-const Base64Schema = z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/, 'Invalid base64 format');
+// 10MB in base64 is ~13.3MB of base64 characters (4/3 ratio), round to 14M
+const MAX_BASE64_LENGTH = 14 * 1024 * 1024;
+const Base64Schema = z.string()
+  .max(MAX_BASE64_LENGTH, 'Base64 data exceeds maximum size limit (10MB)')
+  .regex(/^[A-Za-z0-9+/]*={0,2}$/, 'Invalid base64 format');
 
 // Common schema for authentication fields
 const ApiKeySchema = z.object({
