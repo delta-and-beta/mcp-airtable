@@ -4,7 +4,10 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
  * Tool definitions for the MCP Airtable server.
  * These definitions describe the available tools and their input schemas.
  *
- * AUTHENTICATION: All tools require airtableApiKey parameter for authentication.
+ * AUTHENTICATION: Tools support multiple authentication methods (in order of precedence):
+ * 1. Tool parameter: { "airtableApiKey": "patXXX..." }
+ * 2. HTTP headers: x-airtable-api-key or Authorization: Bearer patXXX...
+ * 3. Environment variable: AIRTABLE_API_KEY
  * Get your API key from: https://airtable.com/create/tokens
  *
  * ID FORMATS:

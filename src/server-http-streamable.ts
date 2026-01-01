@@ -12,6 +12,7 @@ import { logger } from './utils/logger.js';
 import { formatErrorResponse, AuthenticationError } from './utils/errors.js';
 import { toolHandlers, toolDefinitions } from './tools/index.js';
 import { prepareResponse } from './utils/response-sanitizer.js';
+import { extractRequestContext } from './utils/request-context.js';
 
 // Load environment variables
 loadEnv();
@@ -176,7 +177,16 @@ app.post('/stream', authenticate, async (req, res) => {
       }
       
       try {
-        const result = await handler(args);
+        // Extract context from request headers
+        const context = extractRequestContext(req);
+
+        // Merge context with args (args take precedence)
+        const argsWithContext = {
+          ...context,
+          ...args,
+        };
+
+        const result = await handler(argsWithContext);
         const sanitizedResult = prepareResponse(result);
         res.json({
           jsonrpc: '2.0',
