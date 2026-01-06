@@ -3,6 +3,8 @@
  * Supports: parameter > headers > environment variable
  */
 
+import { AuthenticationError } from "./errors.js";
+
 export function extractApiKey(
   args: { airtableApiKey?: string },
   context?: any
@@ -41,7 +43,7 @@ export function extractApiKey(
     return process.env.AIRTABLE_API_KEY;
   }
 
-  throw new Error(
+  throw new AuthenticationError(
     "Airtable API key required. Provide via airtableApiKey parameter, " +
     "x-airtable-api-key header, or AIRTABLE_API_KEY environment variable."
   );

@@ -4,12 +4,29 @@
 
 ## Features
 
+### Core Functionality
 - ✅ **10 Essential Tools** - Complete CRUD + batch operations
-- ✅ **Streamable-HTTP Transport** - Claude Desktop 2025+ native support  
+- ✅ **Streamable-HTTP Transport** - Claude Desktop 2025+ native support
 - ✅ **Header-based Authentication** - API keys from Claude Desktop client
-- ✅ **Production Security** - Formula injection prevention, path traversal blocking
-- ✅ **Clean Architecture** - ~8 files, <500 lines total
-- ✅ **Zero Dependencies Bloat** - Only essential packages
+
+### Production Ready
+- ✅ **Custom Error Classes** - Proper error handling with status codes
+- ✅ **Structured Logging** - JSON logs in production, pretty logs in dev
+- ✅ **Response Caching** - 5-10min TTL for metadata (list_bases, get_schema)
+- ✅ **Rate Limiting** - 60 req/min default, configurable
+- ✅ **Environment Validation** - Zod-validated configuration
+
+### Security Hardening
+- ✅ **Formula Injection Prevention** - Blocks EVAL, EXEC, SQL patterns
+- ✅ **Path Traversal Blocking** - Validates all file paths
+- ✅ **Input Validation** - Zod schemas for all tool parameters
+- ✅ **Base64 Validation** - Size limits and format checking
+
+### Clean Architecture
+- ✅ **8 Core Files** - ~900 lines total (vs 5000+ in traditional implementations)
+- ✅ **Zero Bloat** - Only essential dependencies (FastMCP, Zod, Airtable, dotenv)
+- ✅ **Type Safe** - TypeScript strict mode
+- ✅ **Well Organized** - tools/ lib/ clear separation
 
 ## Quick Start
 
@@ -163,10 +180,28 @@ docker run -p 3000:3000 -e AIRTABLE_API_KEY=your_key mcp-airtable
 ### Environment Variables
 
 ```bash
-PORT=3000                 # Server port
-NODE_ENV=production       # Environment
-AIRTABLE_API_KEY=         # Optional fallback API key
+# Server
+PORT=3000                              # Server port (default: 3000)
+NODE_ENV=production                    # Environment mode
+
+# Authentication
+AIRTABLE_API_KEY=                      # Optional server-level API key (not recommended - use headers)
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true                # Enable rate limiting (default: true)
+RATE_LIMIT_REQUESTS_PER_MINUTE=60      # Max requests per minute (default: 60)
+
+# Caching
+CACHE_ENABLED=true                     # Enable response caching (default: true)
+CACHE_TTL_BASES=300                    # list_bases cache TTL in seconds (default: 300)
+CACHE_TTL_SCHEMA=600                   # get_schema cache TTL in seconds (default: 600)
+CACHE_TTL_TABLES=300                   # list_tables cache TTL in seconds (default: 300)
+
+# Logging
+LOG_LEVEL=info                         # Logging level: debug, info, warn, error (default: info)
 ```
+
+**Note:** In production, API keys should come from **client headers**, not server environment variables. This enables multi-tenant usage.
 
 ## License
 

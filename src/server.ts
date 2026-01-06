@@ -4,6 +4,10 @@
  */
 
 import { FastMCP } from "fastmcp";
+import { logger } from "./lib/logger.js";
+
+// Log configuration on startup
+logger.info("Initializing MCP Airtable server", { version: "1.0.0" });
 
 // Initialize FastMCP server
 export const server = new FastMCP({
@@ -15,14 +19,15 @@ export const server = new FastMCP({
 import "./tools/bases.js";
 import "./tools/tables.js";
 import "./tools/records.js";
+import "./tools/batch.js";
+
+// Health check will be available via FastMCP's built-in endpoints
 
 // Start server function
 export function startServer(transport: "stdio" | "httpStream" = "httpStream") {
   const port = parseInt(process.env.PORT || "3000");
 
-  console.log(`Starting MCP Airtable server...`);
-  console.log(`Transport: ${transport}`);
-  console.log(`Port: ${port}`);
+  logger.info("Starting MCP Airtable server", { transport, port });
 
   server.start({
     transportType: transport,
@@ -33,5 +38,3 @@ export function startServer(transport: "stdio" | "httpStream" = "httpStream") {
   });
 }
 
-// Additional tool imports
-import "./tools/batch.js";

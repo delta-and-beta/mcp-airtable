@@ -110,4 +110,35 @@ export class AirtableClient {
       createdTime: record._rawJson?.createdTime,
     };
   }
+
+  async getRecord(tableName: string, recordId: string, baseId?: string) {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new Error("Base ID required");
+
+    const base = this.airtable.base(bid);
+    const table = base(tableName);
+
+    const record: any = await table.find(recordId);
+
+    return {
+      id: record.id,
+      fields: record.fields,
+      createdTime: record._rawJson?.createdTime,
+    };
+  }
+
+  async deleteRecord(tableName: string, recordId: string, baseId?: string) {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new Error("Base ID required");
+
+    const base = this.airtable.base(bid);
+    const table = base(tableName);
+
+    const result: any = await table.destroy(recordId);
+
+    return {
+      id: result.id,
+      deleted: true,
+    };
+  }
 }

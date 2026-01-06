@@ -6,6 +6,7 @@ import { server } from "../server.js";
 import { z } from "zod";
 import { extractApiKey } from "../lib/auth.js";
 import { AirtableClient } from "../lib/airtable.js";
+import { sanitizeFormula } from "../lib/validation.js";
 
 server.addTool({
   name: "get_records",
@@ -96,16 +97,10 @@ server.addTool({
   execute: async (args, context) => {
     const apiKey = extractApiKey(args, context);
     const client = new AirtableClient(apiKey, args.baseId);
-    
-    const base = (client as any).airtable.base(args.baseId);
-    const table = base(args.tableName);
-    const record: any = await table.find(args.recordId);
-    
-    return JSON.stringify({
-      id: record.id,
-      fields: record.fields,
-      createdTime: record._rawJson?.createdTime,
-    }, null, 2);
+
+    const record = await client.getRecord(args.tableName, args.recordId, args.baseId);
+
+    return JSON.stringify(record, null, 2);
   },
 });
 
@@ -122,17 +117,10 @@ server.addTool({
   execute: async (args, context) => {
     const apiKey = extractApiKey(args, context);
     const client = new AirtableClient(apiKey, args.baseId);
-    
-    const base = (client as any).airtable.base(args.baseId);
-    const table = base(args.tableName);
-    const result: any = await table.destroy(args.recordId);
-    
-    return JSON.stringify({
-      id: result.id,
-      deleted: true,
-    }, null, 2);
+
+    const result = await client.deleteRecord(args.tableName, args.recordId, args.baseId);
+
+    return JSON.stringify(result, null, 2);
   },
 });
 
-// Update get_records to use formula sanitization
-import { sanitizeFormula } from "../lib/validation.js";

@@ -4,13 +4,7 @@
  */
 
 import path from 'path';
-
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
-}
+import { ValidationError } from './errors.js';
 
 export function validateFilePath(filePath: string): string {
   if (!filePath) {
