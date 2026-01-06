@@ -2,12 +2,13 @@
  * Airtable tables tools
  */
 
-import { server } from "../server.js";
 import { z } from "zod";
 import { extractApiKey } from "../lib/auth.js";
 import { AirtableClient } from "../lib/airtable.js";
+import type { FastMCP } from "fastmcp";
 
-server.addTool({
+export function registerTablesTools(server: FastMCP) {
+  server.addTool({
   name: "list_tables",
   description: "List all tables in an Airtable base",
   parameters: z.object({
@@ -22,4 +23,5 @@ server.addTool({
 
     return JSON.stringify({ tables }, null, 2);
   },
-});
+  });
+}

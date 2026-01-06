@@ -5,20 +5,25 @@
 
 import { FastMCP } from "fastmcp";
 
-// Initialize FastMCP server (MUST be before tool imports)
+// Initialize FastMCP server
 export const server = new FastMCP({
   name: "mcp-airtable",
   version: "1.0.0",
 });
 
-// Register tools (side-effect imports - AFTER server export)
-import "./tools/bases.js";
-import "./tools/tables.js";
-import "./tools/records.js";
-import "./tools/batch.js";
-
-// Import logger after tools to avoid circular deps
+// Import tool registration functions
+import { registerBasesTools } from "./tools/bases.js";
+import { registerTablesTools } from "./tools/tables.js";
+import { registerRecordsTools } from "./tools/records.js";
+import { registerBatchTools } from "./tools/batch.js";
 import { logger } from "./lib/logger.js";
+
+// Register all tools
+registerBasesTools(server);
+registerTablesTools(server);
+registerRecordsTools(server);
+registerBatchTools(server);
+
 logger.info("MCP Airtable server initialized", { version: "1.0.0", tools: 10 });
 
 // Health check will be available via FastMCP's built-in endpoints

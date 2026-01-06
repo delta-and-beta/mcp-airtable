@@ -2,12 +2,13 @@
  * Airtable batch operation tools
  */
 
-import { server } from "../server.js";
 import { z } from "zod";
 import { extractApiKey } from "../lib/auth.js";
 import { AirtableClient } from "../lib/airtable.js";
+import type { FastMCP } from "fastmcp";
 
-server.addTool({
+export function registerBatchTools(server: FastMCP) {
+  server.addTool({
   name: "batch_upsert",
   description: "Create or update multiple records (up to 1000)",
   parameters: z.object({
@@ -79,4 +80,5 @@ server.addTool({
       count: allDeleted.length,
     }, null, 2);
   },
-});
+  });
+}

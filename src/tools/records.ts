@@ -2,13 +2,14 @@
  * Airtable records tools
  */
 
-import { server } from "../server.js";
 import { z } from "zod";
 import { extractApiKey } from "../lib/auth.js";
 import { AirtableClient } from "../lib/airtable.js";
 import { sanitizeFormula } from "../lib/validation.js";
+import type { FastMCP } from "fastmcp";
 
-server.addTool({
+export function registerRecordsTools(server: FastMCP) {
+  server.addTool({
   name: "get_records",
   description: "Retrieve records from a table with filtering and sorting",
   parameters: z.object({
@@ -122,5 +123,6 @@ server.addTool({
 
     return JSON.stringify(result, null, 2);
   },
-});
+  });
+}
 

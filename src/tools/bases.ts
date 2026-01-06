@@ -2,13 +2,14 @@
  * Airtable bases tools
  */
 
-import { server } from "../server.js";
 import { z } from "zod";
 import { extractApiKey } from "../lib/auth.js";
 import { AirtableClient } from "../lib/airtable.js";
+import type { FastMCP } from "fastmcp";
 
-// list_bases tool
-server.addTool({
+export function registerBasesTools(server: FastMCP) {
+  // list_bases tool
+  server.addTool({
   name: "list_bases",
   description: "List all Airtable bases accessible with the provided API key",
   parameters: z.object({
@@ -39,4 +40,5 @@ server.addTool({
 
     return JSON.stringify({ tables }, null, 2);
   },
-});
+  });
+}
