@@ -30,7 +30,7 @@ async function mcpRequest(method, params = {}, sessionId = null, apiKey = null) 
   const sessionHeader = response.headers.get('MCP-Session-Id') || response.headers.get('mcp-session-id');
   const text = await response.text();
 
-  // Parse SSE response
+  // Parse streaming response (event-stream format)
   let data = text;
   if (text.includes('event: message')) {
     const match = text.match(/data: (.+)/);

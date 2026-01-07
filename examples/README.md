@@ -216,11 +216,11 @@ npx zeabur deploy
 | Feature | stdio (Local) | Streamable HTTP (Remote) |
 |---------|---------------|--------------------------|
 | Client | Claude Desktop | Claude.ai Web / mcp-remote |
-| Transport | stdin/stdout | HTTP POST/GET + SSE |
+| Transport | stdin/stdout | HTTP POST/GET |
 | Multi-user | No | Yes |
 | Requires hosting | No | Yes |
 | Authentication | Environment variable | HTTP headers (session) |
-| Session management | N/A | Mcp-Session-Id header |
+| Session management | N/A | MCP-Session-Id header |
 
 ---
 
@@ -231,7 +231,7 @@ The server implements the MCP 2025-11-25 Streamable HTTP specification:
 ### Endpoint
 ```
 POST /mcp  - Send JSON-RPC messages (requests, notifications)
-GET  /mcp  - Listen for server-initiated messages (SSE stream)
+GET  /mcp  - Listen for server-initiated messages (optional)
 ```
 
 ### Required Headers (MCP 2025-11-25)
