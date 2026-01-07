@@ -23,6 +23,7 @@ const skipTests = !API_KEY || !BASE_ID;
 const createdRecordIds: string[] = [];
 const createdFieldIds: string[] = [];
 const createdTableIds: string[] = [];
+const createdCommentIds: { recordId: string; commentId: string }[] = [];
 let createdTestBaseId: string | null = null;
 let testTableName = `E2E_Test_${Date.now()}`;
 let testTableId: string | null = null;
@@ -741,6 +742,149 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
     });
   });
 
+  describe("Comment Operations", () => {
+    let commentTestRecordId: string | null = null;
+    let createdCommentId: string | null = null;
+
+    it("create_comment - should create a comment on a record", async () => {
+      // First, get a record to comment on
+      const tables = await client.listTables();
+      const table = tables.find((t: any) => t.name === testTableName);
+      const textField = table?.fields?.find(
+        (f: any) => f.type === "singleLineText" || f.type === "multilineText"
+      );
+
+      if (!textField) {
+        console.log("Skipping: No text field found in table");
+        return;
+      }
+
+      // Create a test record for comments
+      const records = await client.createRecords(testTableName, [
+        { [textField.name]: `Comment Test Record ${Date.now()}` },
+      ]);
+      commentTestRecordId = records[0].id;
+      createdRecordIds.push(commentTestRecordId);
+      console.log(`Created record for comments: ${commentTestRecordId}`);
+
+      // Create a comment
+      try {
+        const comment = await client.createComment(
+          testTableName,
+          commentTestRecordId,
+          "This is an e2e test comment - safe to delete"
+        );
+
+        expect(comment).toHaveProperty("id");
+        expect(comment.id).toMatch(/^com/);
+        expect(comment).toHaveProperty("author");
+        expect(comment.author).toHaveProperty("id");
+        expect(comment.author).toHaveProperty("email");
+        expect(comment.text).toBe("This is an e2e test comment - safe to delete");
+        expect(comment).toHaveProperty("createdTime");
+
+        createdCommentId = comment.id;
+        createdCommentIds.push({ recordId: commentTestRecordId, commentId: comment.id });
+        console.log(`Created comment: ${comment.id} by ${comment.author.email}`);
+      } catch (error: any) {
+        if (error.message?.includes("NOT_FOUND") || error.message?.includes("INVALID_PERMISSIONS")) {
+          console.log("Skipping: Comments API may not be enabled for this base");
+        } else {
+          throw error;
+        }
+      }
+    });
+
+    it("list_comments - should list comments on a record", async () => {
+      if (!commentTestRecordId || !createdCommentId) {
+        console.log("Skipping: No record or comment from previous test");
+        return;
+      }
+
+      try {
+        const result = await client.listComments(testTableName, commentTestRecordId);
+
+        expect(result).toHaveProperty("comments");
+        expect(Array.isArray(result.comments)).toBe(true);
+        expect(result.comments.length).toBeGreaterThan(0);
+
+        const comment = result.comments.find((c: any) => c.id === createdCommentId);
+        expect(comment).toBeDefined();
+        expect(comment?.text).toBe("This is an e2e test comment - safe to delete");
+
+        console.log(`Listed ${result.comments.length} comment(s) on record`);
+      } catch (error: any) {
+        if (error.message?.includes("NOT_FOUND")) {
+          console.log("Skipping: Comments API not available");
+        } else {
+          throw error;
+        }
+      }
+    });
+
+    it("update_comment - should update a comment", async () => {
+      if (!commentTestRecordId || !createdCommentId) {
+        console.log("Skipping: No record or comment from previous test");
+        return;
+      }
+
+      const updatedText = `Updated e2e test comment - ${Date.now()}`;
+
+      try {
+        const comment = await client.updateComment(
+          testTableName,
+          commentTestRecordId,
+          createdCommentId,
+          updatedText
+        );
+
+        expect(comment).toHaveProperty("id");
+        expect(comment.id).toBe(createdCommentId);
+        expect(comment.text).toBe(updatedText);
+        expect(comment).toHaveProperty("lastUpdatedTime");
+
+        console.log(`Updated comment: ${comment.id}`);
+      } catch (error: any) {
+        if (error.message?.includes("NOT_FOUND") || error.message?.includes("INVALID_PERMISSIONS")) {
+          console.log("Skipping: Cannot update comment (may not be author or API not available)");
+        } else {
+          throw error;
+        }
+      }
+    });
+
+    it("delete_comment - should delete a comment", async () => {
+      if (!commentTestRecordId || !createdCommentId) {
+        console.log("Skipping: No record or comment from previous test");
+        return;
+      }
+
+      try {
+        const result = await client.deleteComment(
+          testTableName,
+          commentTestRecordId,
+          createdCommentId
+        );
+
+        expect(result).toHaveProperty("id");
+        expect(result.id).toBe(createdCommentId);
+        expect(result.deleted).toBe(true);
+
+        // Remove from cleanup list since we already deleted it
+        const idx = createdCommentIds.findIndex(c => c.commentId === createdCommentId);
+        if (idx !== -1) createdCommentIds.splice(idx, 1);
+
+        console.log(`Deleted comment: ${result.id}`);
+      } catch (error: any) {
+        if (error.message?.includes("NOT_FOUND") || error.message?.includes("INVALID_PERMISSIONS")) {
+          console.log("Skipping: Cannot delete comment (may not be author or API not available)");
+        } else {
+          throw error;
+        }
+      }
+    });
+  });
+
   describe("Filtering and Querying", () => {
     it("get_records - should filter records by formula", async () => {
       const tables = await client.listTables();
@@ -784,6 +928,7 @@ describe.skipIf(skipTests)("E2E Summary", () => {
     console.log(`Records created during test: ${createdRecordIds.length}`);
     console.log(`Fields created during test: ${createdFieldIds.length}`);
     console.log(`Tables created during test: ${createdTableIds.length}`);
+    console.log(`Comments created during test: ${createdCommentIds.length}`);
     console.log(`Test base created: ${createdTestBaseId || "None"}`);
     console.log("========================\n");
   });
