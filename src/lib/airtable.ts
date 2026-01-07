@@ -5,6 +5,39 @@
 import Airtable from "airtable";
 import { readFile } from "fs/promises";
 import { AirtableError, ValidationError } from "./errors.js";
+import { logger } from "./logger.js";
+
+/**
+ * Wrap fetch with detailed error handling for debugging network issues
+ */
+async function fetchWithDetails(url: string, options: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, options);
+  } catch (error: any) {
+    // Extract detailed error info for debugging
+    const cause = error.cause;
+    const errorDetails = {
+      message: error.message,
+      code: cause?.code,
+      errno: cause?.errno,
+      syscall: cause?.syscall,
+      hostname: cause?.hostname,
+    };
+    logger.error("Fetch failed", { url, errorDetails });
+
+    // Provide more helpful error message
+    let detailedMessage = error.message;
+    if (cause?.code === "ENOTFOUND") {
+      detailedMessage = `DNS lookup failed for ${cause.hostname || url}`;
+    } else if (cause?.code === "ECONNREFUSED") {
+      detailedMessage = `Connection refused to ${url}`;
+    } else if (cause?.code === "CERT_HAS_EXPIRED" || cause?.code?.includes("CERT")) {
+      detailedMessage = `TLS certificate error: ${cause.code}`;
+    }
+
+    throw new Error(`${detailedMessage} [${cause?.code || "UNKNOWN"}]`);
+  }
+}
 
 export class AirtableClient {
   private airtable: Airtable;
@@ -18,7 +51,7 @@ export class AirtableClient {
   }
 
   async listBases() {
-    const response = await fetch("https://api.airtable.com/v0/meta/bases", {
+    const response = await fetchWithDetails("https://api.airtable.com/v0/meta/bases", {
       headers: { Authorization: `Bearer ${this.apiKey}` },
     });
 
@@ -38,7 +71,7 @@ export class AirtableClient {
     const bid = baseId || this.baseId;
     if (!bid) throw new ValidationError("Base ID required");
 
-    const response = await fetch(
+    const response = await fetchWithDetails(
       `https://api.airtable.com/v0/meta/bases/${bid}/tables`,
       {
         headers: { Authorization: `Bearer ${this.apiKey}` },
@@ -229,7 +262,7 @@ export class AirtableClient {
       throw new ValidationError("At least one table is required when creating a base");
     }
 
-    const response = await fetch("https://api.airtable.com/v0/meta/bases", {
+    const response = await fetchWithDetails("https://api.airtable.com/v0/meta/bases", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
@@ -290,7 +323,7 @@ export class AirtableClient {
     };
     if (table.description) body.description = table.description;
 
-    const response = await fetch(
+    const response = await fetchWithDetails(
       `https://api.airtable.com/v0/meta/bases/${bid}/tables`,
       {
         method: "POST",
@@ -342,7 +375,7 @@ export class AirtableClient {
     if (updates.name) body.name = updates.name;
     if (updates.description !== undefined) body.description = updates.description;
 
-    const response = await fetch(
+    const response = await fetchWithDetails(
       `https://api.airtable.com/v0/meta/bases/${bid}/tables/${encodeURIComponent(tableIdOrName)}`,
       {
         method: "PATCH",
@@ -390,7 +423,7 @@ export class AirtableClient {
     if (field.description) body.description = field.description;
     if (field.options) body.options = field.options;
 
-    const response = await fetch(
+    const response = await fetchWithDetails(
       `https://api.airtable.com/v0/meta/bases/${bid}/tables/${encodeURIComponent(tableIdOrName)}/fields`,
       {
         method: "POST",
@@ -436,7 +469,7 @@ export class AirtableClient {
     if (updates.name) body.name = updates.name;
     if (updates.description !== undefined) body.description = updates.description;
 
-    const response = await fetch(
+    const response = await fetchWithDetails(
       `https://api.airtable.com/v0/meta/bases/${bid}/tables/${encodeURIComponent(tableIdOrName)}/fields/${encodeURIComponent(fieldIdOrName)}`,
       {
         method: "PATCH",
@@ -522,7 +555,7 @@ export class AirtableClient {
     // Endpoint format: POST /v0/{baseId}/{recordId}/{fieldIdOrName}/uploadAttachment
     const url = `https://content.airtable.com/v0/${bid}/${recordId}/${encodeURIComponent(fieldIdOrName)}/uploadAttachment`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithDetails(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
@@ -586,7 +619,7 @@ export class AirtableClient {
     const queryString = params.toString();
     const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments${queryString ? `?${queryString}` : ""}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithDetails(url, {
       headers: { Authorization: `Bearer ${this.apiKey}` },
     });
 
@@ -624,7 +657,7 @@ export class AirtableClient {
 
     const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithDetails(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
@@ -667,7 +700,7 @@ export class AirtableClient {
 
     const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments/${commentId}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithDetails(url, {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
@@ -703,7 +736,7 @@ export class AirtableClient {
 
     const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments/${commentId}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithDetails(url, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${this.apiKey}` },
     });
