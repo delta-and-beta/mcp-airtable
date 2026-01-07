@@ -16,6 +16,7 @@ export function extractApiKey(
 
   // 2. HTTP headers (FastMCP provides via session.headers when authenticate callback is configured)
   const headers = context?.session?.headers;
+
   if (headers) {
     // Try x-airtable-api-key (case-insensitive)
     const apiKeyHeader =
@@ -42,8 +43,12 @@ export function extractApiKey(
     return process.env.AIRTABLE_API_KEY;
   }
 
+  // Provide detailed error based on what's missing
+  const hasSession = !!context?.session;
+  const hasHeaders = !!headers;
   throw new AuthenticationError(
-    "Airtable API key required. Provide via airtableApiKey parameter, " +
-    "x-airtable-api-key header, or AIRTABLE_API_KEY environment variable."
+    `Airtable API key required. ` +
+    `Provide via: (1) airtableApiKey parameter, (2) x-airtable-api-key header, or (3) AIRTABLE_API_KEY env var. ` +
+    `[Debug: session=${hasSession}, headers=${hasHeaders}]`
   );
 }
