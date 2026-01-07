@@ -4,7 +4,7 @@
 
 This is a Model Context Protocol (MCP) server providing Airtable integration. Built for **remote deployment** (Streamable HTTP) with **local compatibility** (stdio).
 
-## MCP Transport Standards (2025-03-26 Spec)
+## MCP Transport Standards (2025-11-25 Spec)
 
 ### Primary: Streamable HTTP (Remote)
 
@@ -24,7 +24,7 @@ GET /mcp  - Client listens for server-initiated messages (SSE stream)
 ```
 
 **Why NOT SSE-only:**
-- SSE transport was deprecated in MCP spec 2025-03-26
+- SSE transport was deprecated in MCP spec 2025-03-26, current spec is 2025-11-25
 - "Always-on" SSE creates security blind spots
 - Streamable HTTP is "just HTTP" - better infrastructure compatibility
 - Supports standard middleware, load balancers, and security tooling
@@ -98,13 +98,43 @@ Claude Desktop config:
 }
 ```
 
-## Authentication Priority
+## Authentication (FastMCP Best Practice)
+
+### Server Configuration
+
+The server uses FastMCP's `authenticate` callback to capture HTTP headers and store them in the session:
+
+```typescript
+interface SessionData {
+  headers: IncomingHttpHeaders;
+  [key: string]: unknown;
+}
+
+const server = new FastMCP<SessionData>({
+  name: "mcp-airtable",
+  authenticate: async (request): Promise<SessionData> => ({
+    headers: request.headers,  // Store in session for tools
+  }),
+});
+```
+
+### Tool Access
+
+Tools access headers via `context.session.headers`:
+
+```typescript
+execute: async (args, context) => {
+  const apiKey = context.session?.headers?.["x-airtable-api-key"];
+}
+```
+
+### Priority Order
 
 API key extraction follows this priority:
-1. `airtableApiKey` parameter in tool call
-2. `x-airtable-api-key` HTTP header
+1. `airtableApiKey` parameter in tool call (explicit)
+2. `x-airtable-api-key` HTTP header (via session.headers)
 3. `Authorization: Bearer <token>` header
-4. `AIRTABLE_API_KEY` environment variable
+4. `AIRTABLE_API_KEY` environment variable (fallback)
 
 ## Tool Categories
 
@@ -210,11 +240,12 @@ npm run dev
 
 ### Streamable HTTP vs SSE
 - Use Streamable HTTP for new deployments
-- SSE-only transport is **deprecated** (spec 2024-11-05)
-- Streamable HTTP is the current standard (spec 2025-03-26)
+- SSE-only transport is **deprecated**
+- Streamable HTTP is the current standard (spec 2025-11-25)
 
 ## References
 
-- [MCP Specification](https://modelcontextprotocol.io/specification/2025-03-26)
-- [MCP Transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports)
+- [MCP Specification (Latest)](https://modelcontextprotocol.io/specification/2025-11-25)
+- [MCP Transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+- [MCP Versioning](https://modelcontextprotocol.io/specification/versioning)
 - [Airtable API](https://airtable.com/developers/web/api/introduction)

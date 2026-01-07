@@ -14,12 +14,11 @@ export function extractApiKey(
     return args.airtableApiKey;
   }
 
-  // 2. HTTP headers (from Claude Desktop via mcp-remote)
-  if (context?.request?.headers) {
-    const headers = context.request.headers;
-
+  // 2. HTTP headers (FastMCP provides via session.headers when authenticate callback is configured)
+  const headers = context?.session?.headers;
+  if (headers) {
     // Try x-airtable-api-key (case-insensitive)
-    const apiKeyHeader = 
+    const apiKeyHeader =
       headers["x-airtable-api-key"] ||
       headers["X-Airtable-Api-Key"] ||
       headers["X-AIRTABLE-API-KEY"];

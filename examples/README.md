@@ -58,7 +58,49 @@ This server natively supports both **stdio** (local) and **Streamable HTTP** (re
 
 ---
 
-## Option 2: Remote (Streamable HTTP) - Claude.ai Web
+## Option 2: Remote HTTP - Claude Desktop with mcp-remote
+
+**Best for:** Testing HTTP transport locally before cloud deployment
+
+### Setup
+
+1. Start the HTTP server:
+   ```bash
+   cd mcp-airtable
+   PORT=3001 npm start
+   ```
+
+2. Configure Claude Desktop to use `mcp-remote`:
+
+```json
+{
+  "mcpServers": {
+    "mcp-airtable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:3001/mcp",
+        "--header",
+        "x-airtable-api-key:patXXXXXXXXXXXXXX.YOUR_TOKEN_HERE"
+      ]
+    }
+  }
+}
+```
+
+3. Restart Claude Desktop
+
+### How It Works
+
+- `mcp-remote` bridges stdio (Claude Desktop) to HTTP (server)
+- API key passed via `--header` flag
+- Server captures headers via FastMCP's `authenticate` callback
+- Headers available to tools via `context.session.headers`
+
+---
+
+## Option 3: Remote HTTP - Claude.ai Web
 
 **Best for:** Production, multi-user, cloud deployment
 
@@ -86,52 +128,53 @@ POST/GET https://your-server.com/mcp
 3. Select **Connectors** in sidebar
 4. Click **Add custom connector**
 5. Enter your server URL: `https://your-server.example.com/mcp`
-6. Complete authentication if prompted
-
-### Authentication Options
-
-The server accepts API keys via:
-
-1. **HTTP Header** (recommended for remote):
-   ```
-   x-airtable-api-key: patXXXXX.XXXXX...
-   ```
-
-2. **Authorization Bearer** (OAuth-style):
-   ```
-   Authorization: Bearer patXXXXX.XXXXX...
-   ```
-
-3. **Per-request parameter**:
-   ```json
-   { "airtableApiKey": "patXXXXX.XXXXX..." }
-   ```
+6. Add header: `x-airtable-api-key: patXXXXX.XXXXX...`
 
 ---
 
-## Option 3: Remote with Claude Desktop
+## Authentication Best Practice (FastMCP)
 
-For Claude Desktop to connect to a remote HTTP server, you can use environment-based configuration:
+This server follows FastMCP's recommended authentication pattern:
 
-```json
-{
-  "mcpServers": {
-    "mcp-airtable-remote": {
-      "command": "node",
-      "args": [
-        "/path/to/mcp-airtable/dist/index.js",
-        "--stdio"
-      ],
-      "env": {
-        "AIRTABLE_API_KEY": "patXXXXXXXXXXXXXX.YOUR_TOKEN_HERE",
-        "MCP_PROXY_URL": "https://your-server.example.com/mcp"
-      }
-    }
-  }
-}
+### Server-Side (authenticate callback)
+
+The server uses FastMCP's `authenticate` callback to capture HTTP headers and store them in the session:
+
+```typescript
+const server = new FastMCP<SessionData>({
+  name: "mcp-airtable",
+  version: "1.0.0",
+  authenticate: async (request): Promise<SessionData> => {
+    // Capture HTTP headers and store in session
+    return {
+      headers: request.headers,
+    };
+  },
+});
 ```
 
-Or run a local instance that connects to your remote Airtable data - the server itself handles the Airtable API calls.
+### Tool-Side (context.session.headers)
+
+Tools access headers via `context.session.headers`:
+
+```typescript
+server.addTool({
+  name: "list_bases",
+  execute: async (args, context) => {
+    // Access API key from session headers
+    const apiKey = context.session?.headers?.["x-airtable-api-key"];
+    // ...
+  },
+});
+```
+
+### Priority Order
+
+API key extraction follows this priority:
+1. `airtableApiKey` parameter in tool call (explicit)
+2. `x-airtable-api-key` HTTP header (via session)
+3. `Authorization: Bearer <token>` header (OAuth-style)
+4. `AIRTABLE_API_KEY` environment variable (fallback)
 
 ---
 
@@ -172,18 +215,18 @@ npx zeabur deploy
 
 | Feature | stdio (Local) | Streamable HTTP (Remote) |
 |---------|---------------|--------------------------|
-| Client | Claude Desktop | Claude.ai Web / Any MCP Client |
+| Client | Claude Desktop | Claude.ai Web / mcp-remote |
 | Transport | stdin/stdout | HTTP POST/GET + SSE |
 | Multi-user | No | Yes |
 | Requires hosting | No | Yes |
-| Authentication | Environment variable | HTTP headers |
+| Authentication | Environment variable | HTTP headers (session) |
 | Session management | N/A | Mcp-Session-Id header |
 
 ---
 
 ## Streamable HTTP Endpoint Details
 
-The server implements the MCP 2025-03-26 Streamable HTTP specification:
+The server implements the MCP 2025-11-25 Streamable HTTP specification:
 
 ### Endpoint
 ```
@@ -218,14 +261,15 @@ Content-Type: application/json
 - Verify the path to `dist/index.js` is absolute and correct
 - Check logs: `~/Library/Logs/Claude/mcp*.log` (macOS)
 
-### Remote: Connection refused
-- Verify server is running and accessible
-- Check HTTPS certificate is valid
-- Ensure firewall allows inbound connections on your port
+### mcp-remote: Connection refused
+- Verify HTTP server is running on the specified port
+- Check the URL is correct (include `/mcp` path)
+- Ensure no firewall blocking the connection
 
-### "AIRTABLE_API_KEY required"
-- Local: Add to `env` block in config
-- Remote: Pass via `x-airtable-api-key` header
+### Remote: "AIRTABLE_API_KEY required"
+- Verify header is passed: `--header "x-airtable-api-key:pat..."`
+- Note: No space after colon in header format for mcp-remote
+- For Claude.ai, add header in connector settings
 
 ---
 
@@ -240,6 +284,7 @@ Content-Type: application/json
 
 ## References
 
-- [MCP Specification 2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26)
-- [Streamable HTTP Transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports)
-- [Connect Remote Servers](https://modelcontextprotocol.io/docs/develop/connect-remote-servers)
+- [MCP Specification (Latest)](https://modelcontextprotocol.io/specification/2025-11-25)
+- [Streamable HTTP Transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+- [FastMCP Authentication](https://github.com/punkpeye/fastmcp)
+- [mcp-remote](https://www.npmjs.com/package/mcp-remote)

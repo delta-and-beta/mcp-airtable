@@ -69,21 +69,33 @@ See [`examples/`](./examples/) for complete configuration examples.
 }
 ```
 
-#### Option 2: Remote Server (Streamable HTTP)
+#### Option 2: Remote HTTP (Claude Desktop with mcp-remote)
+
+```json
+{
+  "mcpServers": {
+    "mcp-airtable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:3001/mcp",
+        "--header",
+        "x-airtable-api-key:patXXXXX.XXXXX..."
+      ]
+    }
+  }
+}
+```
+
+#### Option 3: Remote Server (Claude.ai Web)
 
 Deploy to any hosting provider, then connect via Claude.ai:
 
 1. Deploy: `npm start` (runs on port 3000)
 2. Open [claude.ai](https://claude.ai) → Settings → Connectors
 3. Add custom connector: `https://your-server.com/mcp`
-
-```http
-POST /mcp HTTP/1.1
-Content-Type: application/json
-x-airtable-api-key: patXXXXX.XXXXX...
-
-{"jsonrpc":"2.0","method":"tools/list","id":1}
-```
+4. Add header: `x-airtable-api-key: patXXXXX.XXXXX...`
 
 **Config location:**
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -150,12 +162,15 @@ src/
 "Create 5 test tasks in the Tasks table"
 ```
 
-## Authentication Priority
+## Authentication (FastMCP Best Practice)
 
-API keys are extracted in this order:
-1. **Tool parameter** - `airtableApiKey` in request
-2. **HTTP header** - `x-airtable-api-key` from Claude Desktop
-3. **Environment variable** - `AIRTABLE_API_KEY` in .env
+The server uses FastMCP's `authenticate` callback to capture HTTP headers and store them in the session, allowing tools to access headers via `context.session.headers`.
+
+**API key priority:**
+1. **Tool parameter** - `airtableApiKey` in request (explicit)
+2. **HTTP header** - `x-airtable-api-key` via session (recommended for HTTP)
+3. **Bearer token** - `Authorization: Bearer <token>` header
+4. **Environment variable** - `AIRTABLE_API_KEY` (fallback for stdio)
 
 ## Security Features
 
@@ -226,6 +241,9 @@ LOG_LEVEL=info                         # Logging level: debug, info, warn, error
 
 MIT
 
-## Credits
+## References
 
-Built with [FastMCP](https://github.com/punkpeye/fastmcp) - Clean TypeScript framework for MCP servers.
+- [MCP Specification (Latest)](https://modelcontextprotocol.io/specification/2025-11-25)
+- [FastMCP](https://github.com/punkpeye/fastmcp) - TypeScript framework for MCP servers
+- [mcp-remote](https://www.npmjs.com/package/mcp-remote) - Bridge for Claude Desktop HTTP connections
+- [Airtable API](https://airtable.com/developers/web/api/introduction)

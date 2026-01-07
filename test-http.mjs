@@ -45,7 +45,7 @@ async function main() {
   // 1. Initialize
   console.log('1. Initialize session...');
   const init = await mcpRequest('initialize', {
-    protocolVersion: '2024-11-05',
+    protocolVersion: '2025-11-25',
     capabilities: {},
     clientInfo: { name: 'test-client', version: '1.0' },
   });

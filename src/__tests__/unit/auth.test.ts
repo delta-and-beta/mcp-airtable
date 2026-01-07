@@ -23,7 +23,7 @@ describe("extractApiKey", () => {
 
     it("should prefer parameter over header", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             "x-airtable-api-key": "headerKey",
           },
@@ -40,10 +40,10 @@ describe("extractApiKey", () => {
     });
   });
 
-  describe("header extraction (second priority)", () => {
+  describe("header extraction (second priority) - via session.headers", () => {
     it("should extract from x-airtable-api-key header (lowercase)", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             "x-airtable-api-key": "headerKey123",
           },
@@ -55,7 +55,7 @@ describe("extractApiKey", () => {
 
     it("should extract from X-Airtable-Api-Key header (mixed case)", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             "X-Airtable-Api-Key": "headerKeyMixed",
           },
@@ -67,7 +67,7 @@ describe("extractApiKey", () => {
 
     it("should extract from X-AIRTABLE-API-KEY header (uppercase)", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             "X-AIRTABLE-API-KEY": "headerKeyUpper",
           },
@@ -79,7 +79,7 @@ describe("extractApiKey", () => {
 
     it("should handle array header values", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             "x-airtable-api-key": ["firstKey", "secondKey"],
           },
@@ -91,7 +91,7 @@ describe("extractApiKey", () => {
 
     it("should extract from Authorization: Bearer header", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             authorization: "Bearer pat123456789",
           },
@@ -103,7 +103,7 @@ describe("extractApiKey", () => {
 
     it("should handle Authorization header (capitalized)", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             Authorization: "Bearer pat987654321",
           },
@@ -115,7 +115,7 @@ describe("extractApiKey", () => {
 
     it("should handle array Authorization header", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             authorization: ["Bearer patFirst", "Bearer patSecond"],
           },
@@ -127,7 +127,7 @@ describe("extractApiKey", () => {
 
     it("should prefer x-airtable-api-key over Authorization", () => {
       const context = {
-        request: {
+        session: {
           headers: {
             "x-airtable-api-key": "customHeaderKey",
             authorization: "Bearer patAuthKey",
@@ -141,7 +141,7 @@ describe("extractApiKey", () => {
     it("should ignore Authorization header without Bearer prefix", () => {
       process.env.AIRTABLE_API_KEY = "envKey";
       const context = {
-        request: {
+        session: {
           headers: {
             authorization: "Basic dXNlcjpwYXNz",
           },
@@ -165,9 +165,9 @@ describe("extractApiKey", () => {
       expect(result).toBe("envKey");
     });
 
-    it("should use env var when context has no headers", () => {
+    it("should use env var when context has no session", () => {
       process.env.AIRTABLE_API_KEY = "envKey";
-      const result = extractApiKey({}, { request: {} });
+      const result = extractApiKey({}, { session: undefined });
       expect(result).toBe("envKey");
     });
   });
@@ -184,8 +184,8 @@ describe("extractApiKey", () => {
       );
     });
 
-    it("should throw when context has empty headers", () => {
-      const context = { request: { headers: {} } };
+    it("should throw when context has empty session headers", () => {
+      const context = { session: { headers: {} } };
       expect(() => extractApiKey({}, context)).toThrow(AuthenticationError);
     });
 
