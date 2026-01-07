@@ -391,6 +391,146 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
     });
   });
 
+  describe("Attachment Operations", () => {
+    let attachmentFieldId: string | null = null;
+    let attachmentRecordId: string | null = null;
+
+    it("upload_attachment - should create attachment field and upload file", async () => {
+      if (!testTableId) {
+        console.log("Skipping: No table ID available");
+        return;
+      }
+
+      // Step 1: Create an attachment field
+      const attachmentFieldName = `E2E_Attachments_${Date.now()}`;
+      try {
+        const field = await client.createField(testTableId, {
+          name: attachmentFieldName,
+          type: "multipleAttachments",
+          description: "E2E test attachment field",
+        });
+
+        expect(field).toHaveProperty("id");
+        expect(field.type).toBe("multipleAttachments");
+        attachmentFieldId = field.id;
+        createdFieldIds.push(field.id);
+        console.log(`Created attachment field: ${field.id}`);
+      } catch (error: any) {
+        if (error.message?.includes("INVALID_PERMISSIONS")) {
+          console.log("Skipping: No permission to create attachment field");
+          return;
+        }
+        throw error;
+      }
+
+      // Step 2: Create a record to attach file to
+      const tables = await client.listTables();
+      const table = tables.find((t: any) => t.name === testTableName);
+      const textField = table?.fields?.find(
+        (f: any) => f.type === "singleLineText" || f.type === "multilineText"
+      );
+
+      if (!textField) {
+        console.log("Skipping: No text field found for test record");
+        return;
+      }
+
+      const records = await client.createRecords(testTableName, [
+        { [textField.name]: `Attachment Test Record ${Date.now()}` },
+      ]);
+      attachmentRecordId = records[0].id;
+      createdRecordIds.push(attachmentRecordId);
+      console.log(`Created record for attachment: ${attachmentRecordId}`);
+
+      // Step 3: Upload a small text file (base64 encoded)
+      // Note: uploadAttachment endpoint uses: POST /v0/{baseId}/{recordId}/{fieldIdOrName}/uploadAttachment
+      // It does NOT require tableId - just baseId, recordId, and fieldIdOrName
+      const testContent = "Hello, Airtable! This is a test attachment.";
+      const base64Data = Buffer.from(testContent).toString("base64");
+
+      try {
+        const result = await client.uploadAttachment(
+          attachmentRecordId,
+          attachmentFieldId!,
+          {
+            base64Data,
+            filename: "test-upload.txt",
+            contentType: "text/plain",
+          }
+        );
+
+        expect(result).toHaveProperty("id");
+        expect(result.id).toMatch(/^rec/);
+        expect(result).toHaveProperty("fields");
+
+        // Get the attachment from the response fields
+        const fieldKey = Object.keys(result.fields)[0];
+        const attachments = result.fields[fieldKey] as any[];
+        expect(attachments.length).toBeGreaterThan(0);
+
+        const attachment = attachments[0];
+        expect(attachment).toHaveProperty("id");
+        expect(attachment.id).toMatch(/^att/);
+        expect(attachment).toHaveProperty("url");
+        expect(attachment.filename).toBe("test-upload.txt");
+        expect(attachment.type).toBe("text/plain");
+        expect(attachment.size).toBeGreaterThan(0);
+
+        console.log(`Uploaded attachment: ${attachment.id} (${attachment.size} bytes)`);
+      } catch (error: any) {
+        console.log("Upload error:", error.message);
+        throw error;
+      }
+    });
+
+    it("upload_attachment - should upload a PNG image", async () => {
+      if (!attachmentFieldId || !attachmentRecordId) {
+        console.log("Skipping: Prerequisites not met (need field and record from previous test)");
+        return;
+      }
+
+      // 1x1 transparent PNG (smallest valid PNG)
+      const transparentPngBase64 =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+      try {
+        const result = await client.uploadAttachment(
+          attachmentRecordId,
+          attachmentFieldId!,
+          {
+            base64Data: transparentPngBase64,
+            filename: "test-image.png",
+            contentType: "image/png",
+          }
+        );
+
+        expect(result).toHaveProperty("id");
+        expect(result).toHaveProperty("fields");
+
+        // Get the attachments from the response (should now have 2)
+        const fieldKey = Object.keys(result.fields)[0];
+        const attachments = result.fields[fieldKey] as any[];
+        expect(attachments.length).toBe(2); // text file + PNG
+
+        // Get the newly added PNG (last one)
+        const attachment = attachments[attachments.length - 1];
+        expect(attachment).toHaveProperty("id");
+        expect(attachment.id).toMatch(/^att/);
+        expect(attachment.filename).toBe("test-image.png");
+        expect(attachment.type).toBe("image/png");
+        // Note: width/height may not be immediately available for images
+        // Airtable processes images asynchronously
+
+        console.log(
+          `Uploaded PNG: ${attachment.id}${attachment.width ? ` (${attachment.width}x${attachment.height})` : ""}`
+        );
+      } catch (error: any) {
+        console.log("PNG upload error:", error.message);
+        throw error;
+      }
+    });
+  });
+
   describe("Filtering and Querying", () => {
     it("get_records - should filter records by formula", async () => {
       const tables = await client.listTables();
