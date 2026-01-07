@@ -233,8 +233,8 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
               description: "Task tracking table",
               fields: [
                 { name: "Task Name", type: "singleLineText" },
-                { name: "Due Date", type: "date" },
-                { name: "Completed", type: "checkbox" },
+                { name: "Notes", type: "multilineText" },
+                { name: "Priority", type: "singleLineText" },
               ],
             },
           ],
@@ -242,7 +242,7 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
 
         expect(result).toHaveProperty("id");
         expect(result.id).toMatch(/^app/);
-        expect(result.name).toBe(newBaseName);
+        // Note: Airtable create base API doesn't return name in response
         expect(result).toHaveProperty("tables");
         expect(result.tables.length).toBe(2);
 
@@ -251,6 +251,7 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
         expect(projectsTable).toBeDefined();
         expect(projectsTable?.id).toMatch(/^tbl/);
         expect(projectsTable?.fields.length).toBe(3);
+        expect(projectsTable?.views?.length).toBeGreaterThan(0);
 
         // Verify second table
         const tasksTable = result.tables.find((t: any) => t.name === "Tasks");
@@ -258,7 +259,7 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
         expect(tasksTable?.fields.length).toBe(3);
 
         createdTestBaseId = result.id;
-        console.log(`Created base: ${result.id} (${newBaseName}) with 2 tables`);
+        console.log(`Created base: ${result.id} with 2 tables (Projects, Tasks)`);
       } catch (error: any) {
         if (
           error.message?.includes("INVALID_PERMISSIONS") ||
