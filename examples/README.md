@@ -234,11 +234,22 @@ POST /mcp  - Send JSON-RPC messages (requests, notifications)
 GET  /mcp  - Listen for server-initiated messages (SSE stream)
 ```
 
+### Required Headers (MCP 2025-11-25)
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Content-Type` | Yes | `application/json` |
+| `Accept` | Yes | `application/json, text/event-stream` |
+| `MCP-Protocol-Version` | Yes | `2025-11-25` (on all requests) |
+| `MCP-Session-Id` | After init | Session ID from server |
+| `x-airtable-api-key` | Yes | Your Airtable API key |
+
 ### Request Format
 ```http
 POST /mcp HTTP/1.1
 Content-Type: application/json
 Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-11-25
 x-airtable-api-key: patXXXXX.XXXXX...
 
 {"jsonrpc":"2.0","method":"tools/list","id":1}

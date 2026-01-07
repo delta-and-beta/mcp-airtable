@@ -8,7 +8,7 @@ This is a Model Context Protocol (MCP) server providing Airtable integration. Bu
 
 ### Primary: Streamable HTTP (Remote)
 
-The server is designed for remote deployment using **Streamable HTTP transport** - the current MCP standard that replaced the deprecated HTTP+SSE transport.
+The server is designed for remote deployment using **Streamable HTTP transport** - the current MCP standard (2025-11-25). This replaced the older HTTP+SSE transport from 2024-11-05.
 
 **Key characteristics:**
 - Single HTTP endpoint supporting POST and GET methods
@@ -24,7 +24,8 @@ GET /mcp  - Client listens for server-initiated messages (SSE stream)
 ```
 
 **Why NOT SSE-only:**
-- SSE transport was deprecated in MCP spec 2025-03-26, current spec is 2025-11-25
+- The older HTTP+SSE transport (2024-11-05) was replaced by Streamable HTTP
+- SSE is still used within Streamable HTTP for streaming server responses
 - "Always-on" SSE creates security blind spots
 - Streamable HTTP is "just HTTP" - better infrastructure compatibility
 - Supports standard middleware, load balancers, and security tooling
@@ -238,10 +239,10 @@ npm run dev
 - Continues on partial failure
 - Returns detailed success/failure report
 
-### Streamable HTTP vs SSE
-- Use Streamable HTTP for new deployments
-- SSE-only transport is **deprecated**
-- Streamable HTTP is the current standard (spec 2025-11-25)
+### Streamable HTTP vs HTTP+SSE
+- Use Streamable HTTP (current standard, spec 2025-11-25)
+- SSE is part of Streamable HTTP for streaming responses
+- The older HTTP+SSE transport (2024-11-05) should not be used
 
 ## References
 

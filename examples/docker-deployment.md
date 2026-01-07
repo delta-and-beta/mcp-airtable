@@ -185,15 +185,20 @@ docker inspect --format='{{range .State.Health.Log}}{{.Output}}{{end}}' mcp-airt
 ### Direct HTTP Client
 
 ```bash
-# List available tools
+# List available tools (note required MCP headers)
 curl -X POST https://your-domain.com/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
   -H "x-airtable-api-key: patXXXXX.XXXXX..." \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 
 # Call a tool (API key via header - no parameter needed)
 curl -X POST https://your-domain.com/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -H "MCP-Session-Id: <session-id-from-init>" \
   -H "x-airtable-api-key: patXXXXX.XXXXX..." \
   -d '{
     "jsonrpc":"2.0",
