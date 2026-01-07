@@ -99,7 +99,7 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
 
-            # SSE support for Streamable HTTP
+            # Streaming support for Streamable HTTP
             proxy_set_header Connection '';
             proxy_buffering off;
             proxy_cache off;
@@ -161,20 +161,44 @@ docker inspect --format='{{range .State.Health.Log}}{{.Output}}{{end}}' mcp-airt
 
 1. Go to [claude.ai](https://claude.ai) → Settings → Connectors
 2. Add custom connector: `https://your-domain.com/mcp`
-3. Authentication will be handled via headers
+3. Add header: `x-airtable-api-key: patXXXXX.XXXXX...`
+
+### Claude Desktop (via mcp-remote)
+
+```json
+{
+  "mcpServers": {
+    "mcp-airtable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://your-domain.com/mcp",
+        "--header",
+        "x-airtable-api-key:patXXXXX.XXXXX..."
+      ]
+    }
+  }
+}
+```
 
 ### Direct HTTP Client
 
 ```bash
-# List available tools
+# List available tools (note required MCP headers)
 curl -X POST https://your-domain.com/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
   -H "x-airtable-api-key: patXXXXX.XXXXX..." \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 
-# Call a tool
+# Call a tool (API key via header - no parameter needed)
 curl -X POST https://your-domain.com/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -H "MCP-Session-Id: <session-id-from-init>" \
   -H "x-airtable-api-key: patXXXXX.XXXXX..." \
   -d '{
     "jsonrpc":"2.0",
@@ -186,6 +210,32 @@ curl -X POST https://your-domain.com/mcp \
     "id":2
   }'
 ```
+
+## Authentication Architecture
+
+The server uses FastMCP's `authenticate` callback pattern to capture HTTP headers:
+
+```typescript
+const server = new FastMCP<SessionData>({
+  authenticate: async (request) => ({
+    headers: request.headers,  // Store headers in session
+  }),
+});
+```
+
+Tools access headers via `context.session.headers`:
+
+```typescript
+execute: async (args, context) => {
+  const apiKey = context.session?.headers?.["x-airtable-api-key"];
+}
+```
+
+**Priority order:**
+1. `airtableApiKey` parameter (explicit per-call)
+2. `x-airtable-api-key` header (via session)
+3. `Authorization: Bearer` header (OAuth-style)
+4. `AIRTABLE_API_KEY` env var (fallback)
 
 ## Troubleshooting
 

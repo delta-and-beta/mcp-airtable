@@ -30,13 +30,13 @@ ENV PORT=3000
 EXPOSE 3000
 
 # Health check - verify MCP endpoint responds
-# Uses the initialize handshake to verify server is operational
+# Uses the initialize handshake with required MCP 2025-11-25 headers
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD node -e "const http = require('http'); \
-    const req = http.request({hostname:'localhost',port:3000,path:'/mcp',method:'POST',headers:{'Content-Type':'application/json'}}, \
+    const req = http.request({hostname:'localhost',port:3000,path:'/mcp',method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25'}}, \
     (res) => process.exit(res.statusCode < 500 ? 0 : 1)); \
     req.on('error', () => process.exit(1)); \
-    req.write(JSON.stringify({jsonrpc:'2.0',method:'initialize',params:{capabilities:{}},id:1})); \
+    req.write(JSON.stringify({jsonrpc:'2.0',method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'healthcheck',version:'1.0'}},id:1})); \
     req.end();"
 
 # Run server in HTTP mode (Streamable HTTP transport)

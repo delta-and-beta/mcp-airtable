@@ -4,30 +4,29 @@
 
 This is a Model Context Protocol (MCP) server providing Airtable integration. Built for **remote deployment** (Streamable HTTP) with **local compatibility** (stdio).
 
-## MCP Transport Standards (2025-03-26 Spec)
+## MCP Transport Standards (2025-11-25 Spec)
 
 ### Primary: Streamable HTTP (Remote)
 
-The server is designed for remote deployment using **Streamable HTTP transport** - the current MCP standard that replaced the deprecated HTTP+SSE transport.
+The server is designed for remote deployment using **Streamable HTTP transport** - the current MCP standard (2025-11-25).
 
 **Key characteristics:**
 - Single HTTP endpoint supporting POST and GET methods
-- Optional SSE streaming for server-initiated messages
-- Session management via `Mcp-Session-Id` header
+- Session management via `MCP-Session-Id` header
 - Supports multiple concurrent client connections
 - Stateless or stateful operation modes
 
 **Endpoint structure:**
 ```
 POST /mcp - Client sends JSON-RPC messages
-GET /mcp  - Client listens for server-initiated messages (SSE stream)
+GET /mcp  - Client listens for server-initiated messages (optional streaming)
 ```
 
-**Why NOT SSE-only:**
-- SSE transport was deprecated in MCP spec 2025-03-26
-- "Always-on" SSE creates security blind spots
-- Streamable HTTP is "just HTTP" - better infrastructure compatibility
-- Supports standard middleware, load balancers, and security tooling
+**Required headers (MCP 2025-11-25):**
+- `Content-Type: application/json`
+- `Accept: application/json, text/event-stream`
+- `MCP-Protocol-Version: 2025-11-25`
+- `MCP-Session-Id: <session-id>` (after initialization)
 
 ### Secondary: stdio (Local Development)
 
@@ -98,13 +97,43 @@ Claude Desktop config:
 }
 ```
 
-## Authentication Priority
+## Authentication (FastMCP Best Practice)
+
+### Server Configuration
+
+The server uses FastMCP's `authenticate` callback to capture HTTP headers and store them in the session:
+
+```typescript
+interface SessionData {
+  headers: IncomingHttpHeaders;
+  [key: string]: unknown;
+}
+
+const server = new FastMCP<SessionData>({
+  name: "mcp-airtable",
+  authenticate: async (request): Promise<SessionData> => ({
+    headers: request.headers,  // Store in session for tools
+  }),
+});
+```
+
+### Tool Access
+
+Tools access headers via `context.session.headers`:
+
+```typescript
+execute: async (args, context) => {
+  const apiKey = context.session?.headers?.["x-airtable-api-key"];
+}
+```
+
+### Priority Order
 
 API key extraction follows this priority:
-1. `airtableApiKey` parameter in tool call
-2. `x-airtable-api-key` HTTP header
+1. `airtableApiKey` parameter in tool call (explicit)
+2. `x-airtable-api-key` HTTP header (via session.headers)
 3. `Authorization: Bearer <token>` header
-4. `AIRTABLE_API_KEY` environment variable
+4. `AIRTABLE_API_KEY` environment variable (fallback)
 
 ## Tool Categories
 
@@ -208,13 +237,9 @@ npm run dev
 - Continues on partial failure
 - Returns detailed success/failure report
 
-### Streamable HTTP vs SSE
-- Use Streamable HTTP for new deployments
-- SSE-only transport is **deprecated** (spec 2024-11-05)
-- Streamable HTTP is the current standard (spec 2025-03-26)
-
 ## References
 
-- [MCP Specification](https://modelcontextprotocol.io/specification/2025-03-26)
-- [MCP Transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports)
+- [MCP Specification (Latest)](https://modelcontextprotocol.io/specification/2025-11-25)
+- [MCP Transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+- [MCP Versioning](https://modelcontextprotocol.io/specification/versioning)
 - [Airtable API](https://airtable.com/developers/web/api/introduction)

@@ -10,9 +10,10 @@ async function mcpRequest(method, params = {}, sessionId = null, apiKey = null) 
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json, text/event-stream',
+    'MCP-Protocol-Version': '2025-11-25',  // Required by MCP spec
   };
 
-  if (sessionId) headers['mcp-session-id'] = sessionId;
+  if (sessionId) headers['MCP-Session-Id'] = sessionId;  // Case-sensitive per spec
   if (apiKey) headers['x-airtable-api-key'] = apiKey;
 
   const response = await fetch(`http://localhost:${PORT}/mcp`, {
@@ -26,10 +27,10 @@ async function mcpRequest(method, params = {}, sessionId = null, apiKey = null) 
     }),
   });
 
-  const sessionHeader = response.headers.get('mcp-session-id');
+  const sessionHeader = response.headers.get('MCP-Session-Id') || response.headers.get('mcp-session-id');
   const text = await response.text();
 
-  // Parse SSE response
+  // Parse streaming response (event-stream format)
   let data = text;
   if (text.includes('event: message')) {
     const match = text.match(/data: (.+)/);
@@ -45,7 +46,7 @@ async function main() {
   // 1. Initialize
   console.log('1. Initialize session...');
   const init = await mcpRequest('initialize', {
-    protocolVersion: '2024-11-05',
+    protocolVersion: '2025-11-25',
     capabilities: {},
     clientInfo: { name: 'test-client', version: '1.0' },
   });

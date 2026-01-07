@@ -4,11 +4,25 @@
  */
 
 import { FastMCP } from "fastmcp";
+import type { IncomingHttpHeaders } from "http";
 
-// Initialize FastMCP server
-export const server = new FastMCP({
+// Session data type - stores HTTP headers for tool access
+interface SessionData {
+  headers: IncomingHttpHeaders;
+  [key: string]: unknown; // Index signature required by FastMCPSessionAuth
+}
+
+// Initialize FastMCP server with authentication to capture headers
+export const server = new FastMCP<SessionData>({
   name: "mcp-airtable",
   version: "1.0.0",
+  authenticate: async (request): Promise<SessionData> => {
+    // Capture HTTP headers and store in session
+    // This allows tools to access headers via context.session.headers
+    return {
+      headers: request.headers,
+    };
+  },
 });
 
 // Import tool registration functions

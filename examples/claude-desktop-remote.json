@@ -1,7 +1,16 @@
 {
-  "_comment": "Claude.ai Web - Add as Custom Connector in Settings > Connectors",
-  "url": "https://your-server.example.com/mcp",
-  "headers": {
-    "x-airtable-api-key": "patXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  "_comment_1": "Option A: Claude Desktop with mcp-remote (connects to HTTP server)",
+  "_comment_2": "Requires: npm install -g mcp-remote OR use npx",
+  "mcpServers": {
+    "mcp-airtable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:3001/mcp",
+        "--header",
+        "x-airtable-api-key:patXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+      ]
+    }
   }
 }
