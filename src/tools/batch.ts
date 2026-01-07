@@ -50,7 +50,7 @@ interface BatchDeleteResult {
 
 export function registerBatchTools(server: FastMCP) {
   server.addTool({
-    name: "batch_upsert",
+    name: "upsert_records",
     description: "Create or update multiple records (up to 1000). Returns partial results if some chunks fail.",
     parameters: z.object({
       baseId: z.string().regex(/^app[a-zA-Z0-9]{14}$/),
@@ -126,7 +126,7 @@ export function registerBatchTools(server: FastMCP) {
   });
 
   server.addTool({
-    name: "batch_delete",
+    name: "delete_records",
     description: "Delete multiple records (up to 1000). WARNING: Cannot be undone. Returns partial results if some chunks fail.",
     parameters: z.object({
       baseId: z.string().regex(/^app[a-zA-Z0-9]{14}$/),

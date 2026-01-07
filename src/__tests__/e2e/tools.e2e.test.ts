@@ -94,7 +94,7 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
       console.log(`Found ${bases.length} bases, including test base: ${testBase?.name}`);
     });
 
-    it("get_schema (list_tables) - should list tables in base", async () => {
+    it("get_base_schema - should list tables in base", async () => {
       const tables = await client.listTables();
 
       expect(Array.isArray(tables)).toBe(true);
@@ -442,7 +442,7 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
   });
 
   describe("Batch Operations", () => {
-    it("batch_upsert - should create and update records in bulk", async () => {
+    it("upsert_records - should create and update records in bulk", async () => {
       const tables = await client.listTables();
       const table = tables.find((t: any) => t.name === testTableName);
       const textField = table?.fields?.find(
@@ -476,7 +476,7 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
       console.log(`Batch created ${createdArray.length} records`);
     });
 
-    it("batch_delete - should delete multiple records", async () => {
+    it("delete_records - should delete multiple records", async () => {
       // Delete 2 records if available
       const toDelete = createdRecordIds.splice(0, Math.min(2, createdRecordIds.length));
 
