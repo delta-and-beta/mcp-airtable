@@ -3,9 +3,37 @@ version: '3.8'
 services:
   mcp-airtable:
     build: .
+    container_name: mcp-airtable
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Optional: Set default API key (not recommended - use per-request headers)
+      # - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
     restart: unless-stopped
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Optional: Nginx reverse proxy with HTTPS
+  # Uncomment to enable
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: mcp-nginx
+  #   ports:
+  #     - "443:443"
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./certs:/etc/nginx/certs:ro
+  #   depends_on:
+  #     - mcp-airtable
+  #   restart: unless-stopped
