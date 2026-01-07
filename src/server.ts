@@ -90,7 +90,7 @@ registerRecordsTools(server);
 registerBatchTools(server);
 registerFieldsTools(server);
 
-logger.info("MCP Airtable server initialized", { version: "1.0.0", tools: 15 });
+logger.info("MCP Airtable server initialized", { version: "1.0.0", tools: 16 });
 
 // Health check will be available via FastMCP's built-in endpoints
 

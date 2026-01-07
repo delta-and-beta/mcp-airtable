@@ -315,6 +315,58 @@ export class AirtableClient {
   }
 
   /**
+   * Update a table's name or description
+   * PATCH /v0/meta/bases/{baseId}/tables/{tableIdOrName}
+   * Note: Cannot change table fields - use createField/updateField for that
+   */
+  async updateTable(
+    baseId: string,
+    tableIdOrName: string,
+    updates: { name?: string; description?: string }
+  ): Promise<{
+    id: string;
+    name: string;
+    primaryFieldId: string;
+    fields: Array<{ id: string; name: string; type: string }>;
+    views: Array<{ id: string; name: string; type: string }>;
+    description?: string;
+  }> {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    if (!updates.name && updates.description === undefined) {
+      throw new ValidationError("At least one of name or description must be provided");
+    }
+
+    const body: Record<string, unknown> = {};
+    if (updates.name) body.name = updates.name;
+    if (updates.description !== undefined) body.description = updates.description;
+
+    const response = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${bid}/tables/${encodeURIComponent(tableIdOrName)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to update table: ${(errorData as any).error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "updateTable", baseId: bid, tableIdOrName }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
    * Create a new field in a table
    * POST /v0/meta/bases/{baseId}/tables/{tableIdOrName}/fields
    */

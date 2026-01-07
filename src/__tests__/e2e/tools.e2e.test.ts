@@ -190,6 +190,39 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
         }
       }
     });
+
+    it("update_table - should update table name and description", async () => {
+      if (createdTableIds.length === 0) {
+        console.log("Skipping: No tables created yet");
+        return;
+      }
+
+      const tableId = createdTableIds[0];
+      const newName = `E2E_Updated_Table_${Date.now()}`;
+      const newDescription = "Updated via e2e test";
+
+      try {
+        const result = await client.updateTable(BASE_ID!, tableId, {
+          name: newName,
+          description: newDescription,
+        });
+
+        expect(result).toHaveProperty("id");
+        expect(result.id).toBe(tableId);
+        expect(result.name).toBe(newName);
+        expect(result.description).toBe(newDescription);
+        expect(result).toHaveProperty("fields");
+        expect(result).toHaveProperty("views");
+
+        console.log(`Updated table: ${tableId} -> ${newName}`);
+      } catch (error: any) {
+        if (error.message?.includes("INVALID_PERMISSIONS")) {
+          console.log("Skipping: No permission to update tables");
+        } else {
+          throw error;
+        }
+      }
+    });
   });
 
   describe("Base Creation Operations", () => {
