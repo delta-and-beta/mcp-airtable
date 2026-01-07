@@ -15,32 +15,7 @@ describe("extractApiKey", () => {
     process.env = originalEnv;
   });
 
-  describe("parameter extraction (highest priority)", () => {
-    it("should extract API key from airtableApiKey parameter", () => {
-      const result = extractApiKey({ airtableApiKey: "pat123456" });
-      expect(result).toBe("pat123456");
-    });
-
-    it("should prefer parameter over header", () => {
-      const context = {
-        session: {
-          headers: {
-            "x-airtable-api-key": "headerKey",
-          },
-        },
-      };
-      const result = extractApiKey({ airtableApiKey: "paramKey" }, context);
-      expect(result).toBe("paramKey");
-    });
-
-    it("should prefer parameter over environment variable", () => {
-      process.env.AIRTABLE_API_KEY = "envKey";
-      const result = extractApiKey({ airtableApiKey: "paramKey" });
-      expect(result).toBe("paramKey");
-    });
-  });
-
-  describe("header extraction (second priority) - via session.headers", () => {
+  describe("header extraction (highest priority) - via session.headers", () => {
     it("should extract from x-airtable-api-key header (lowercase)", () => {
       const context = {
         session: {
@@ -149,6 +124,50 @@ describe("extractApiKey", () => {
       };
       const result = extractApiKey({}, context);
       expect(result).toBe("envKey");
+    });
+
+    it("should prefer header over parameter", () => {
+      const context = {
+        session: {
+          headers: {
+            "x-airtable-api-key": "headerKey",
+          },
+        },
+      };
+      const result = extractApiKey({ airtableApiKey: "paramKey" }, context);
+      expect(result).toBe("headerKey");
+    });
+
+    it("should prefer header over environment variable", () => {
+      process.env.AIRTABLE_API_KEY = "envKey";
+      const context = {
+        session: {
+          headers: {
+            "x-airtable-api-key": "headerKey",
+          },
+        },
+      };
+      const result = extractApiKey({}, context);
+      expect(result).toBe("headerKey");
+    });
+  });
+
+  describe("parameter extraction (second priority)", () => {
+    it("should extract API key from airtableApiKey parameter", () => {
+      const result = extractApiKey({ airtableApiKey: "pat123456" });
+      expect(result).toBe("pat123456");
+    });
+
+    it("should prefer parameter over environment variable", () => {
+      process.env.AIRTABLE_API_KEY = "envKey";
+      const result = extractApiKey({ airtableApiKey: "paramKey" });
+      expect(result).toBe("paramKey");
+    });
+
+    it("should use parameter when no header in session", () => {
+      const context = { session: { headers: {} } };
+      const result = extractApiKey({ airtableApiKey: "paramKey" }, context);
+      expect(result).toBe("paramKey");
     });
   });
 

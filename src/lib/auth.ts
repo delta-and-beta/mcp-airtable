@@ -1,6 +1,6 @@
 /**
  * Authentication utilities for API key extraction
- * Supports: parameter > headers > environment variable
+ * Priority: headers > parameter > environment variable
  */
 
 import { AuthenticationError } from "./errors.js";
@@ -9,12 +9,7 @@ export function extractApiKey(
   args: { airtableApiKey?: string },
   context?: any
 ): string {
-  // 1. Tool parameter (highest priority)
-  if (args.airtableApiKey) {
-    return args.airtableApiKey;
-  }
-
-  // 2. HTTP headers (FastMCP provides via session.headers when authenticate callback is configured)
+  // 1. HTTP headers (highest priority - set once during session init)
   const headers = context?.session?.headers;
 
   if (headers) {
@@ -36,6 +31,11 @@ export function extractApiKey(
         return authStr.substring(7);
       }
     }
+  }
+
+  // 2. Tool parameter (override for single call)
+  if (args.airtableApiKey) {
+    return args.airtableApiKey;
   }
 
   // 3. Environment variable (fallback)
