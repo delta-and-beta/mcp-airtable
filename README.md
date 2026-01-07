@@ -51,24 +51,43 @@ Server starts on **http://localhost:3000/mcp** with streamable-HTTP transport.
 
 ### Claude Desktop Configuration
 
-Add to `~/.config/claude/claude_desktop_config.json`:
+See [`examples/`](./examples/) for complete configuration examples.
+
+#### Option 1: Local Development (stdio)
 
 ```json
 {
   "mcpServers": {
-    "airtable": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "http://localhost:3000/mcp",
-        "--header",
-        "x-airtable-api-key:YOUR_AIRTABLE_API_KEY"
-      ]
+    "mcp-airtable": {
+      "command": "node",
+      "args": ["/path/to/mcp-airtable/dist/index.js", "--stdio"],
+      "env": {
+        "AIRTABLE_API_KEY": "patXXXXX.XXXXX..."
+      }
     }
   }
 }
 ```
+
+#### Option 2: Remote Server (Streamable HTTP)
+
+Deploy to any hosting provider, then connect via Claude.ai:
+
+1. Deploy: `npm start` (runs on port 3000)
+2. Open [claude.ai](https://claude.ai) → Settings → Connectors
+3. Add custom connector: `https://your-server.com/mcp`
+
+```http
+POST /mcp HTTP/1.1
+Content-Type: application/json
+x-airtable-api-key: patXXXXX.XXXXX...
+
+{"jsonrpc":"2.0","method":"tools/list","id":1}
+```
+
+**Config location:**
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 **Get your API key:** https://airtable.com/create/tokens
 
