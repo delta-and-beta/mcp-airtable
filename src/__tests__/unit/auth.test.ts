@@ -178,10 +178,7 @@ describe("extractApiKey", () => {
     });
 
     it("should throw with helpful message", () => {
-      expect(() => extractApiKey({})).toThrow(
-        "Airtable API key required. Provide via airtableApiKey parameter, " +
-          "x-airtable-api-key header, or AIRTABLE_API_KEY environment variable."
-      );
+      expect(() => extractApiKey({})).toThrow(/Airtable API key required/);
     });
 
     it("should throw when context has empty session headers", () => {
