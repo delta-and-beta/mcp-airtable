@@ -217,13 +217,12 @@ export class AirtableClient {
     }>;
   }): Promise<{
     id: string;
-    name: string;
-    permissionLevel: string;
     tables: Array<{
       id: string;
       name: string;
       primaryFieldId: string;
       fields: Array<{ id: string; name: string; type: string }>;
+      views: Array<{ id: string; name: string; type: string }>;
     }>;
   }> {
     if (!options.tables || options.tables.length === 0) {
