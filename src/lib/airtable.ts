@@ -3,6 +3,7 @@
  */
 
 import Airtable from "airtable";
+import { readFile } from "fs/promises";
 import { AirtableError, ValidationError } from "./errors.js";
 
 export class AirtableClient {
@@ -289,5 +290,134 @@ export class AirtableClient {
     }
 
     return await response.json();
+  }
+
+  /**
+   * Upload an attachment to a record's attachment field
+   * POST https://content.airtable.com/v0/{baseId}/{recordId}/{fieldIdOrName}/uploadAttachment
+   *
+   * Note: The endpoint does NOT include table ID - only baseId, recordId, and fieldIdOrName
+   *
+   * Supports two input methods:
+   * 1. filePath - Upload from local file system
+   * 2. base64Data + filename - Upload from base64-encoded content
+   */
+  async uploadAttachment(
+    recordId: string,
+    fieldIdOrName: string,
+    options: {
+      baseId?: string;
+      filePath?: string;
+      base64Data?: string;
+      filename?: string;
+      contentType?: string;
+    }
+  ): Promise<{
+    id: string;
+    createdTime: string;
+    fields: Record<string, unknown>;
+  }> {
+    const bid = options.baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    // Validate input: must provide either filePath OR (base64Data + filename)
+    if (!options.filePath && !options.base64Data) {
+      throw new ValidationError("Either filePath or base64Data must be provided");
+    }
+    if (options.base64Data && !options.filename) {
+      throw new ValidationError("filename is required when using base64Data");
+    }
+
+    let base64Content: string;
+    let filename: string;
+    let contentType: string;
+
+    if (options.filePath) {
+      // Read file from disk and encode to base64
+      try {
+        const fileBuffer = await readFile(options.filePath);
+        base64Content = fileBuffer.toString("base64");
+      } catch (err: any) {
+        throw new ValidationError(`Failed to read file: ${err.message}`);
+      }
+      // Extract filename from path
+      filename = options.filename || options.filePath.split("/").pop() || "file";
+      contentType = options.contentType || this.guessContentType(filename);
+    } else {
+      // Use provided base64 data directly
+      base64Content = options.base64Data!;
+      filename = options.filename!;
+      contentType = options.contentType || this.guessContentType(filename);
+    }
+
+    // Upload to Airtable Content API with JSON body
+    // Endpoint format: POST /v0/{baseId}/{recordId}/{fieldIdOrName}/uploadAttachment
+    const url = `https://content.airtable.com/v0/${bid}/${recordId}/${encodeURIComponent(fieldIdOrName)}/uploadAttachment`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contentType,
+        file: base64Content,
+        filename,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage: string;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error?.message || errorData.error || response.statusText;
+      } catch {
+        errorMessage = errorText || response.statusText;
+      }
+      throw new AirtableError(
+        `Failed to upload attachment: ${errorMessage}`,
+        response.status,
+        { endpoint: "uploadAttachment", recordId, fieldIdOrName }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Guess content type from filename extension
+   */
+  private guessContentType(filename: string): string {
+    const ext = filename.toLowerCase().split(".").pop();
+    const mimeTypes: Record<string, string> = {
+      // Images
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      webp: "image/webp",
+      svg: "image/svg+xml",
+      // Documents
+      pdf: "application/pdf",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      // Text
+      txt: "text/plain",
+      csv: "text/csv",
+      json: "application/json",
+      html: "text/html",
+      // Audio/Video
+      mp3: "audio/mpeg",
+      wav: "audio/wav",
+      mp4: "video/mp4",
+      webm: "video/webm",
+      // Archives
+      zip: "application/zip",
+    };
+    return mimeTypes[ext || ""] || "application/octet-stream";
   }
 }
