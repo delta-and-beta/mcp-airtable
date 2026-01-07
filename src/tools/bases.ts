@@ -29,9 +29,9 @@ export function registerBasesTools(server: FastMCP) {
     },
   });
 
-  // get_schema tool
+  // get_base_schema tool
   server.addTool({
-    name: "get_schema",
+    name: "get_base_schema",
     description: "Get the complete schema of a base including all tables, fields, and views",
     parameters: z.object({
       baseId: z.string().regex(/^app[a-zA-Z0-9]{14}$/),
