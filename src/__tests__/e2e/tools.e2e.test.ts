@@ -254,8 +254,9 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
         fields: { [textField.name]: `Batch Upsert Test ${i} - ${Date.now()}` },
       }));
 
+      // Airtable SDK bulk create expects {fields: {...}} format
       const created: any = await airtableTable.create(
-        toCreate.map((r) => r.fields),
+        toCreate,
         { typecast: true }
       );
       const createdArray = Array.isArray(created) ? created : [created];
@@ -291,10 +292,16 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
 
   describe("Field Operations", () => {
     it("create_field - should create a new field", async () => {
+      if (!testTableId) {
+        console.log("Skipping: No table ID available");
+        return;
+      }
+
       const fieldName = `E2E_Field_${Date.now()}`;
 
       try {
-        const field = await client.createField(testTableName, {
+        // Use table ID for Meta API (field operations)
+        const field = await client.createField(testTableId, {
           name: fieldName,
           type: "singleLineText",
           description: "E2E test field - safe to delete",
@@ -318,10 +325,16 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
     });
 
     it("create_field - should create a singleSelect field with options", async () => {
+      if (!testTableId) {
+        console.log("Skipping: No table ID available");
+        return;
+      }
+
       const fieldName = `E2E_Select_${Date.now()}`;
 
       try {
-        const field = await client.createField(testTableName, {
+        // Use table ID for Meta API (field operations)
+        const field = await client.createField(testTableId, {
           name: fieldName,
           type: "singleSelect",
           description: "E2E test select field",
@@ -350,8 +363,8 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
     });
 
     it("update_field - should update field name and description", async () => {
-      if (createdFieldIds.length === 0) {
-        console.log("Skipping: No fields created yet");
+      if (createdFieldIds.length === 0 || !testTableId) {
+        console.log("Skipping: No fields created yet or no table ID");
         return;
       }
 
@@ -359,7 +372,8 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
       const newName = `E2E_Updated_${Date.now()}`;
 
       try {
-        const field = await client.updateField(testTableName, fieldId, {
+        // Use table ID for Meta API (field operations)
+        const field = await client.updateField(testTableId!, fieldId, {
           name: newName,
           description: "Updated description",
         });
