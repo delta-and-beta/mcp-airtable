@@ -99,6 +99,50 @@ export class AirtableClient {
     };
   }
 
+  /**
+   * Create multiple records with auto-batching (10 per request, 100ms delay)
+   * @param tableName - Table name
+   * @param records - Array of field objects to create
+   * @param options - Optional baseId and typecast settings
+   * @returns Array of created records
+   */
+  async createRecords(
+    tableName: string,
+    records: Array<Record<string, unknown>>,
+    options: { baseId?: string; typecast?: boolean } = {}
+  ) {
+    const bid = options.baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    const base = this.airtable.base(bid);
+    const table = base(tableName);
+
+    const results: Array<{ id: string; fields: Record<string, unknown>; createdTime?: string }> = [];
+    const BATCH_SIZE = 10;
+    const RATE_LIMIT_DELAY = 100; // 100ms between batches
+
+    for (let i = 0; i < records.length; i += BATCH_SIZE) {
+      // Add delay between batches (not before the first batch)
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
+      }
+
+      const chunk = records.slice(i, i + BATCH_SIZE);
+      const created: any = await table.create(chunk as any, { typecast: options.typecast });
+      const createdArray = Array.isArray(created) ? created : [created];
+
+      results.push(
+        ...createdArray.map((r: any) => ({
+          id: r.id,
+          fields: r.fields,
+          createdTime: r._rawJson?.createdTime,
+        }))
+      );
+    }
+
+    return results;
+  }
+
   async updateRecord(
     tableName: string,
     recordId: string,

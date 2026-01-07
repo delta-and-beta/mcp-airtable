@@ -70,9 +70,15 @@ export function registerBatchTools(server: FastMCP) {
 
         const succeeded: BatchUpsertSuccess[] = [];
         const failed: BatchFailure[] = [];
+        const RATE_LIMIT_DELAY = 100; // 100ms between batches
 
         // Process in chunks of 10
         for (let i = 0; i < args.records.length; i += 10) {
+          // Add delay between batches (not before the first batch)
+          if (i > 0) {
+            await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
+          }
+
           const chunkIndex = Math.floor(i / 10);
           const chunk = args.records.slice(i, i + 10);
           const chunkRecordIds = chunk.map(r => r.id || `new_${i + chunk.indexOf(r)}`);
@@ -136,9 +142,15 @@ export function registerBatchTools(server: FastMCP) {
 
         const succeeded: BatchDeleteSuccess[] = [];
         const failed: BatchFailure[] = [];
+        const RATE_LIMIT_DELAY = 100; // 100ms between batches
 
         // Process in chunks of 10
         for (let i = 0; i < args.recordIds.length; i += 10) {
+          // Add delay between batches (not before the first batch)
+          if (i > 0) {
+            await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
+          }
+
           const chunkIndex = Math.floor(i / 10);
           const chunk = args.recordIds.slice(i, i + 10);
 
