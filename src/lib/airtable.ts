@@ -128,7 +128,9 @@ export class AirtableClient {
       }
 
       const chunk = records.slice(i, i + BATCH_SIZE);
-      const created: any = await table.create(chunk as any, { typecast: options.typecast });
+      // Airtable SDK bulk create expects {fields: {...}} format
+      const recordsToCreate = chunk.map((fields) => ({ fields }));
+      const created: any = await table.create(recordsToCreate as any, { typecast: options.typecast });
       const createdArray = Array.isArray(created) ? created : [created];
 
       results.push(
