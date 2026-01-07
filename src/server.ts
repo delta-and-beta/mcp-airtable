@@ -81,6 +81,7 @@ import { registerTablesTools } from "./tools/tables.js";
 import { registerRecordsTools } from "./tools/records.js";
 import { registerBatchTools } from "./tools/batch.js";
 import { registerFieldsTools } from "./tools/fields.js";
+import { registerCommentsTools } from "./tools/comments.js";
 import { logger } from "./lib/logger.js";
 
 // Register all tools
@@ -89,8 +90,9 @@ registerTablesTools(server);
 registerRecordsTools(server);
 registerBatchTools(server);
 registerFieldsTools(server);
+registerCommentsTools(server);
 
-logger.info("MCP Airtable server initialized", { version: "1.0.0", tools: 16 });
+logger.info("MCP Airtable server initialized", { version: "1.0.0", tools: 20 });
 
 // Health check will be available via FastMCP's built-in endpoints
 

@@ -554,6 +554,172 @@ export class AirtableClient {
     return await response.json();
   }
 
+  // ============================================================================
+  // COMMENTS API
+  // ============================================================================
+
+  /**
+   * List comments on a record
+   * GET /v0/{baseId}/{tableIdOrName}/{recordId}/comments
+   */
+  async listComments(
+    tableIdOrName: string,
+    recordId: string,
+    options: { baseId?: string; offset?: string; pageSize?: number } = {}
+  ): Promise<{
+    comments: Array<{
+      id: string;
+      author: { id: string; email: string; name?: string };
+      text: string;
+      createdTime: string;
+      lastUpdatedTime?: string;
+    }>;
+    offset?: string;
+  }> {
+    const bid = options.baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    const params = new URLSearchParams();
+    if (options.offset) params.set("offset", options.offset);
+    if (options.pageSize) params.set("pageSize", String(options.pageSize));
+
+    const queryString = params.toString();
+    const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments${queryString ? `?${queryString}` : ""}`;
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to list comments: ${(errorData as any).error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "listComments", tableIdOrName, recordId }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Create a comment on a record
+   * POST /v0/{baseId}/{tableIdOrName}/{recordId}/comments
+   *
+   * Supports user mentions with format: @[usrXXXXXXXXXXXXXX]
+   */
+  async createComment(
+    tableIdOrName: string,
+    recordId: string,
+    text: string,
+    baseId?: string
+  ): Promise<{
+    id: string;
+    author: { id: string; email: string; name?: string };
+    text: string;
+    createdTime: string;
+  }> {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to create comment: ${(errorData as any).error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "createComment", tableIdOrName, recordId }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Update a comment
+   * PATCH /v0/{baseId}/{tableIdOrName}/{recordId}/comments/{commentId}
+   */
+  async updateComment(
+    tableIdOrName: string,
+    recordId: string,
+    commentId: string,
+    text: string,
+    baseId?: string
+  ): Promise<{
+    id: string;
+    author: { id: string; email: string; name?: string };
+    text: string;
+    createdTime: string;
+    lastUpdatedTime: string;
+  }> {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments/${commentId}`;
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to update comment: ${(errorData as any).error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "updateComment", tableIdOrName, recordId, commentId }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Delete a comment
+   * DELETE /v0/{baseId}/{tableIdOrName}/{recordId}/comments/{commentId}
+   */
+  async deleteComment(
+    tableIdOrName: string,
+    recordId: string,
+    commentId: string,
+    baseId?: string
+  ): Promise<{ id: string; deleted: true }> {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    const url = `https://api.airtable.com/v0/${bid}/${encodeURIComponent(tableIdOrName)}/${recordId}/comments/${commentId}`;
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to delete comment: ${(errorData as any).error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "deleteComment", tableIdOrName, recordId, commentId }
+      );
+    }
+
+    return { id: commentId, deleted: true };
+  }
+
   /**
    * Guess content type from filename extension
    */
