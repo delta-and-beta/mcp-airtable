@@ -14,6 +14,7 @@ import { AirtableClient } from "../../lib/airtable.js";
 // Test configuration from environment
 const API_KEY = process.env.AIRTABLE_API_KEY;
 const BASE_ID = process.env.AIRTABLE_TEST_BASE_ID;
+const WORKSPACE_ID = process.env.AIRTABLE_WORKSPACE_ID; // Optional - for create_base test
 
 // Skip all tests if credentials not provided
 const skipTests = !API_KEY || !BASE_ID;
@@ -21,8 +22,11 @@ const skipTests = !API_KEY || !BASE_ID;
 // Test data tracking for cleanup
 const createdRecordIds: string[] = [];
 const createdFieldIds: string[] = [];
+const createdTableIds: string[] = [];
+let createdTestBaseId: string | null = null;
 let testTableName = `E2E_Test_${Date.now()}`;
 let testTableId: string | null = null;
+let workspaceId: string | null = null;
 
 describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
   let client: AirtableClient;
@@ -79,6 +83,14 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
       // Verify test base is in the list
       const testBase = bases.find((b: any) => b.id === BASE_ID);
       expect(testBase).toBeDefined();
+
+      // Capture workspaceId for create_base test
+      if (testBase?.permissionLevel === "create") {
+        // Try to get workspaceId from the base info
+        // Note: list_bases may not include workspaceId, so we'll try to get it
+        workspaceId = testBase.workspaceId || null;
+      }
+
       console.log(`Found ${bases.length} bases, including test base: ${testBase?.name}`);
     });
 
@@ -95,6 +107,170 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
       testTableName = tables[0].name;
       testTableId = tables[0].id;
       console.log(`Found ${tables.length} tables, using: ${testTableName}`);
+    });
+  });
+
+  describe("Table Creation Operations", () => {
+    it("create_table - should create a new table in the base", async () => {
+      const newTableName = `E2E_Created_Table_${Date.now()}`;
+
+      try {
+        const result = await client.createTable(BASE_ID!, {
+          name: newTableName,
+          description: "E2E test table - safe to delete",
+          fields: [
+            { name: "Name", type: "singleLineText" },
+            { name: "Notes", type: "multilineText" },
+            {
+              name: "Status",
+              type: "singleSelect",
+              options: {
+                choices: [
+                  { name: "Pending", color: "yellowBright" },
+                  { name: "Active", color: "greenBright" },
+                  { name: "Completed", color: "blueBright" },
+                ],
+              },
+            },
+          ],
+        });
+
+        expect(result).toHaveProperty("id");
+        expect(result.id).toMatch(/^tbl/);
+        expect(result.name).toBe(newTableName);
+        expect(result).toHaveProperty("primaryFieldId");
+        expect(result).toHaveProperty("fields");
+        expect(result.fields.length).toBe(3);
+        expect(result).toHaveProperty("views");
+        expect(result.views.length).toBeGreaterThan(0);
+
+        createdTableIds.push(result.id);
+        console.log(`Created table: ${result.id} (${newTableName})`);
+      } catch (error: any) {
+        if (error.message?.includes("INVALID_PERMISSIONS")) {
+          console.log("Skipping: No permission to create tables in this base");
+        } else {
+          throw error;
+        }
+      }
+    });
+
+    it("create_table - should create table with various field types", async () => {
+      const newTableName = `E2E_AllFields_${Date.now()}`;
+
+      try {
+        const result = await client.createTable(BASE_ID!, {
+          name: newTableName,
+          fields: [
+            { name: "Title", type: "singleLineText" },
+            { name: "Description", type: "multilineText" },
+            { name: "Email", type: "email" },
+            { name: "Website", type: "url" },
+          ],
+        });
+
+        expect(result).toHaveProperty("id");
+        expect(result.id).toMatch(/^tbl/);
+        expect(result.fields.length).toBe(4);
+
+        // Verify field types
+        const fieldTypes = result.fields.map((f: any) => f.type);
+        expect(fieldTypes).toContain("singleLineText");
+        expect(fieldTypes).toContain("multilineText");
+        expect(fieldTypes).toContain("email");
+        expect(fieldTypes).toContain("url");
+
+        createdTableIds.push(result.id);
+        console.log(`Created table with 4 field types: ${result.id}`);
+      } catch (error: any) {
+        if (error.message?.includes("INVALID_PERMISSIONS")) {
+          console.log("Skipping: No permission to create tables");
+        } else {
+          throw error;
+        }
+      }
+    });
+  });
+
+  describe("Base Creation Operations", () => {
+    it("create_base - should create a new base with tables", async () => {
+      // This test requires AIRTABLE_WORKSPACE_ID environment variable
+      const wspId = WORKSPACE_ID || workspaceId;
+
+      if (!wspId) {
+        console.log("Skipping create_base test: AIRTABLE_WORKSPACE_ID not set");
+        return;
+      }
+
+      const newBaseName = `E2E_Test_Base_${Date.now()}`;
+
+      try {
+        const result = await client.createBase({
+          name: newBaseName,
+          workspaceId: wspId,
+          tables: [
+            {
+              name: "Projects",
+              description: "Main projects table",
+              fields: [
+                { name: "Project Name", type: "singleLineText" },
+                { name: "Description", type: "multilineText" },
+                {
+                  name: "Status",
+                  type: "singleSelect",
+                  options: {
+                    choices: [
+                      { name: "Planning", color: "blueBright" },
+                      { name: "In Progress", color: "yellowBright" },
+                      { name: "Completed", color: "greenBright" },
+                    ],
+                  },
+                },
+              ],
+            },
+            {
+              name: "Tasks",
+              description: "Task tracking table",
+              fields: [
+                { name: "Task Name", type: "singleLineText" },
+                { name: "Due Date", type: "date" },
+                { name: "Completed", type: "checkbox" },
+              ],
+            },
+          ],
+        });
+
+        expect(result).toHaveProperty("id");
+        expect(result.id).toMatch(/^app/);
+        expect(result.name).toBe(newBaseName);
+        expect(result).toHaveProperty("tables");
+        expect(result.tables.length).toBe(2);
+
+        // Verify first table
+        const projectsTable = result.tables.find((t: any) => t.name === "Projects");
+        expect(projectsTable).toBeDefined();
+        expect(projectsTable?.id).toMatch(/^tbl/);
+        expect(projectsTable?.fields.length).toBe(3);
+
+        // Verify second table
+        const tasksTable = result.tables.find((t: any) => t.name === "Tasks");
+        expect(tasksTable).toBeDefined();
+        expect(tasksTable?.fields.length).toBe(3);
+
+        createdTestBaseId = result.id;
+        console.log(`Created base: ${result.id} (${newBaseName}) with 2 tables`);
+      } catch (error: any) {
+        if (
+          error.message?.includes("INVALID_PERMISSIONS") ||
+          error.message?.includes("NOT_AUTHORIZED") ||
+          error.message?.includes("cannot create bases")
+        ) {
+          console.log("Skipping: No permission to create bases in this workspace");
+        } else {
+          console.log("Create base error:", error.message);
+          throw error;
+        }
+      }
     });
   });
 
@@ -570,8 +746,11 @@ describe.skipIf(skipTests)("E2E Summary", () => {
     console.log("\n=== E2E Test Summary ===");
     console.log(`API Key: ${API_KEY?.slice(0, 10)}...`);
     console.log(`Base ID: ${BASE_ID}`);
+    console.log(`Workspace ID: ${WORKSPACE_ID || workspaceId || "Not set"}`);
     console.log(`Records created during test: ${createdRecordIds.length}`);
     console.log(`Fields created during test: ${createdFieldIds.length}`);
+    console.log(`Tables created during test: ${createdTableIds.length}`);
+    console.log(`Test base created: ${createdTestBaseId || "None"}`);
     console.log("========================\n");
   });
 });

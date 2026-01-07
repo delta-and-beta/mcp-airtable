@@ -199,6 +199,123 @@ export class AirtableClient {
   }
 
   /**
+   * Create a new base
+   * POST /v0/meta/bases
+   */
+  async createBase(options: {
+    name: string;
+    workspaceId: string;
+    tables: Array<{
+      name: string;
+      description?: string;
+      fields: Array<{
+        name: string;
+        type: string;
+        description?: string;
+        options?: Record<string, unknown>;
+      }>;
+    }>;
+  }): Promise<{
+    id: string;
+    name: string;
+    permissionLevel: string;
+    tables: Array<{
+      id: string;
+      name: string;
+      primaryFieldId: string;
+      fields: Array<{ id: string; name: string; type: string }>;
+    }>;
+  }> {
+    if (!options.tables || options.tables.length === 0) {
+      throw new ValidationError("At least one table is required when creating a base");
+    }
+
+    const response = await fetch("https://api.airtable.com/v0/meta/bases", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: options.name,
+        workspaceId: options.workspaceId,
+        tables: options.tables,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to create base: ${(errorData as any).error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "createBase", name: options.name }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Create a new table in a base
+   * POST /v0/meta/bases/{baseId}/tables
+   */
+  async createTable(
+    baseId: string,
+    table: {
+      name: string;
+      description?: string;
+      fields: Array<{
+        name: string;
+        type: string;
+        description?: string;
+        options?: Record<string, unknown>;
+      }>;
+    }
+  ): Promise<{
+    id: string;
+    name: string;
+    primaryFieldId: string;
+    fields: Array<{ id: string; name: string; type: string }>;
+    views: Array<{ id: string; name: string; type: string }>;
+  }> {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    if (!table.fields || table.fields.length === 0) {
+      throw new ValidationError("At least one field is required when creating a table");
+    }
+
+    const body: Record<string, unknown> = {
+      name: table.name,
+      fields: table.fields,
+    };
+    if (table.description) body.description = table.description;
+
+    const response = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${bid}/tables`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to create table: ${(errorData as any).error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "createTable", baseId: bid, tableName: table.name }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
    * Create a new field in a table
    * POST /v0/meta/bases/{baseId}/tables/{tableIdOrName}/fields
    */
