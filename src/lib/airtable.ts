@@ -3,6 +3,7 @@
  */
 
 import Airtable from "airtable";
+import { AirtableError, ValidationError } from "./errors.js";
 
 export class AirtableClient {
   private airtable: Airtable;
@@ -21,7 +22,11 @@ export class AirtableClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to list bases: ${response.statusText}`);
+      throw new AirtableError(
+        `Failed to list bases: ${response.statusText}`,
+        response.status,
+        { endpoint: "listBases" }
+      );
     }
 
     const data: any = await response.json();
@@ -30,7 +35,7 @@ export class AirtableClient {
 
   async listTables(baseId?: string) {
     const bid = baseId || this.baseId;
-    if (!bid) throw new Error("Base ID required");
+    if (!bid) throw new ValidationError("Base ID required");
 
     const response = await fetch(
       `https://api.airtable.com/v0/meta/bases/${bid}/tables`,
@@ -40,7 +45,11 @@ export class AirtableClient {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to list tables: ${response.statusText}`);
+      throw new AirtableError(
+        `Failed to list tables: ${response.statusText}`,
+        response.status,
+        { endpoint: "listTables", baseId: bid }
+      );
     }
 
     const data: any = await response.json();
@@ -52,7 +61,7 @@ export class AirtableClient {
     options: { baseId?: string; filterByFormula?: string; maxRecords?: number } = {}
   ) {
     const bid = options.baseId || this.baseId;
-    if (!bid) throw new Error("Base ID required");
+    if (!bid) throw new ValidationError("Base ID required");
 
     const base = this.airtable.base(bid);
     const table = base(tableName);
@@ -76,7 +85,7 @@ export class AirtableClient {
     options: { baseId?: string; typecast?: boolean } = {}
   ) {
     const bid = options.baseId || this.baseId;
-    if (!bid) throw new Error("Base ID required");
+    if (!bid) throw new ValidationError("Base ID required");
 
     const base = this.airtable.base(bid);
     const table = base(tableName);
@@ -97,7 +106,7 @@ export class AirtableClient {
     options: { baseId?: string; typecast?: boolean } = {}
   ) {
     const bid = options.baseId || this.baseId;
-    if (!bid) throw new Error("Base ID required");
+    if (!bid) throw new ValidationError("Base ID required");
 
     const base = this.airtable.base(bid);
     const table = base(tableName);
@@ -113,7 +122,7 @@ export class AirtableClient {
 
   async getRecord(tableName: string, recordId: string, baseId?: string) {
     const bid = baseId || this.baseId;
-    if (!bid) throw new Error("Base ID required");
+    if (!bid) throw new ValidationError("Base ID required");
 
     const base = this.airtable.base(bid);
     const table = base(tableName);
@@ -129,7 +138,7 @@ export class AirtableClient {
 
   async deleteRecord(tableName: string, recordId: string, baseId?: string) {
     const bid = baseId || this.baseId;
-    if (!bid) throw new Error("Base ID required");
+    if (!bid) throw new ValidationError("Base ID required");
 
     const base = this.airtable.base(bid);
     const table = base(tableName);

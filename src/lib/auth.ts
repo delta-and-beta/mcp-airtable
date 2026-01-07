@@ -28,11 +28,11 @@ export function extractApiKey(
       return Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
     }
 
-    // Try Authorization: Bearer pat...
+    // Try Authorization: Bearer <token>
     const auth = headers["authorization"] || headers["Authorization"];
     if (auth) {
       const authStr = Array.isArray(auth) ? auth[0] : auth;
-      if (authStr.startsWith("Bearer pat")) {
+      if (authStr.startsWith("Bearer ")) {
         return authStr.substring(7);
       }
     }
