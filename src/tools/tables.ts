@@ -94,4 +94,47 @@ RETURNS: Table ID, name, primary field ID, fields, and views`,
       }
     },
   });
+
+  // update_table tool
+  server.addTool({
+    name: "update_table",
+    description: `Update a table's name or description.
+
+NOTE: This only updates table metadata. To modify fields, use create_field or update_field.
+
+LIMITATIONS:
+- Cannot change field definitions (use field tools instead)
+- At least one of name or description must be provided
+
+EXAMPLE:
+{
+  "baseId": "appABC123def456gh",
+  "tableIdOrName": "Tasks",
+  "name": "Project Tasks",
+  "description": "All tasks for the Q4 project"
+}
+
+RETURNS: Updated table with id, name, fields, views, and description`,
+    parameters: z.object({
+      baseId: z.string().regex(/^app[a-zA-Z0-9]{14}$/).describe("Base ID (starts with 'app')"),
+      tableIdOrName: z.string().min(1).describe("Table ID (starts with 'tbl') or exact table name"),
+      name: z.string().min(1).max(255).optional().describe("New table name"),
+      description: z.string().max(20000).optional().describe("New table description"),
+      airtableApiKey: z.string().optional().describe("Airtable API key (optional if passed via header)"),
+    }),
+    execute: async (args, context) => {
+      try {
+        const apiKey = extractApiKey(args, context);
+        const client = new AirtableClient(apiKey, args.baseId);
+        const result = await client.updateTable(args.baseId, args.tableIdOrName, {
+          name: args.name,
+          description: args.description,
+        });
+
+        return JSON.stringify(result, null, 2);
+      } catch (error) {
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+      }
+    },
+  });
 }
