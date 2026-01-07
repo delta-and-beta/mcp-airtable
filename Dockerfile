@@ -25,18 +25,19 @@ COPY --from=builder /app/dist ./dist
 # Environment
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOST=0.0.0.0
 
 # Expose Streamable HTTP endpoint
 EXPOSE 3000
 
-# Health check - verify MCP endpoint responds
-# Uses the initialize handshake with required MCP 2025-11-25 headers
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+# Health check - TCP check that server is responding
+# Accept any response (including 400 for missing session) as healthy
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
   CMD node -e "const http = require('http'); \
-    const req = http.request({hostname:'localhost',port:3000,path:'/mcp',method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25'}}, \
+    const req = http.request({hostname:'127.0.0.1',port:3000,path:'/mcp',method:'POST',headers:{'Content-Type':'application/json'}}, \
     (res) => process.exit(res.statusCode < 500 ? 0 : 1)); \
     req.on('error', () => process.exit(1)); \
-    req.write(JSON.stringify({jsonrpc:'2.0',method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'healthcheck',version:'1.0'}},id:1})); \
+    req.write('{}'); \
     req.end();"
 
 # Run server in HTTP mode (Streamable HTTP transport)

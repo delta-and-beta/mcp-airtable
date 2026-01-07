@@ -150,4 +150,98 @@ export class AirtableClient {
       deleted: true,
     };
   }
+
+  /**
+   * Create a new field in a table
+   * POST /v0/meta/bases/{baseId}/tables/{tableIdOrName}/fields
+   */
+  async createField(
+    tableIdOrName: string,
+    field: {
+      name: string;
+      type: string;
+      description?: string;
+      options?: Record<string, unknown>;
+    },
+    baseId?: string
+  ) {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    const body: Record<string, unknown> = {
+      name: field.name,
+      type: field.type,
+    };
+    if (field.description) body.description = field.description;
+    if (field.options) body.options = field.options;
+
+    const response = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${bid}/tables/${encodeURIComponent(tableIdOrName)}/fields`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to create field: ${errorData.error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "createField", tableIdOrName, field: field.name }
+      );
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Update a field's name or description
+   * PATCH /v0/meta/bases/{baseId}/tables/{tableIdOrName}/fields/{fieldIdOrName}
+   * Note: Cannot change field type or options
+   */
+  async updateField(
+    tableIdOrName: string,
+    fieldIdOrName: string,
+    updates: { name?: string; description?: string },
+    baseId?: string
+  ) {
+    const bid = baseId || this.baseId;
+    if (!bid) throw new ValidationError("Base ID required");
+
+    if (!updates.name && !updates.description) {
+      throw new ValidationError("At least one of name or description must be provided");
+    }
+
+    const body: Record<string, unknown> = {};
+    if (updates.name) body.name = updates.name;
+    if (updates.description !== undefined) body.description = updates.description;
+
+    const response = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${bid}/tables/${encodeURIComponent(tableIdOrName)}/fields/${encodeURIComponent(fieldIdOrName)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        `Failed to update field: ${errorData.error?.message || response.statusText}`,
+        response.status,
+        { endpoint: "updateField", tableIdOrName, fieldIdOrName }
+      );
+    }
+
+    return await response.json();
+  }
 }
