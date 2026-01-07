@@ -1,9 +1,44 @@
 /**
- * Authentication utilities for API key extraction
+ * Authentication and configuration extraction utilities
  * Priority: headers > parameter > environment variable
  */
 
 import { AuthenticationError } from "./errors.js";
+
+/**
+ * Extract workspace ID from headers, args, or environment
+ * Returns undefined if not found (optional field)
+ */
+export function extractWorkspaceId(
+  args: { workspaceId?: string },
+  context?: any
+): string | undefined {
+  // 1. HTTP headers (highest priority - set once during session init)
+  const headers = context?.session?.headers;
+
+  if (headers) {
+    const workspaceHeader =
+      headers["x-airtable-workspace-id"] ||
+      headers["X-Airtable-Workspace-Id"] ||
+      headers["X-AIRTABLE-WORKSPACE-ID"];
+
+    if (workspaceHeader) {
+      return Array.isArray(workspaceHeader) ? workspaceHeader[0] : workspaceHeader;
+    }
+  }
+
+  // 2. Tool parameter
+  if (args.workspaceId) {
+    return args.workspaceId;
+  }
+
+  // 3. Environment variable (fallback)
+  if (process.env.AIRTABLE_WORKSPACE_ID) {
+    return process.env.AIRTABLE_WORKSPACE_ID;
+  }
+
+  return undefined;
+}
 
 export function extractApiKey(
   args: { airtableApiKey?: string },

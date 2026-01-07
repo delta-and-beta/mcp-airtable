@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { extractApiKey } from "../../lib/auth.js";
+import { extractApiKey, extractWorkspaceId } from "../../lib/auth.js";
 import { AuthenticationError } from "../../lib/errors.js";
 
 describe("extractApiKey", () => {
@@ -221,6 +221,104 @@ describe("extractApiKey", () => {
       process.env.AIRTABLE_API_KEY = "envKey";
       const result = extractApiKey({}, null);
       expect(result).toBe("envKey");
+    });
+  });
+});
+
+describe("extractWorkspaceId", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv };
+    delete process.env.AIRTABLE_WORKSPACE_ID;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  describe("header extraction (highest priority)", () => {
+    it("should extract from x-airtable-workspace-id header (lowercase)", () => {
+      const context = {
+        session: {
+          headers: {
+            "x-airtable-workspace-id": "wspHeaderId123",
+          },
+        },
+      };
+      const result = extractWorkspaceId({}, context);
+      expect(result).toBe("wspHeaderId123");
+    });
+
+    it("should extract from X-Airtable-Workspace-Id header (mixed case)", () => {
+      const context = {
+        session: {
+          headers: {
+            "X-Airtable-Workspace-Id": "wspMixedCase",
+          },
+        },
+      };
+      const result = extractWorkspaceId({}, context);
+      expect(result).toBe("wspMixedCase");
+    });
+
+    it("should prefer header over parameter", () => {
+      const context = {
+        session: {
+          headers: {
+            "x-airtable-workspace-id": "wspFromHeader",
+          },
+        },
+      };
+      const result = extractWorkspaceId({ workspaceId: "wspFromParam" }, context);
+      expect(result).toBe("wspFromHeader");
+    });
+
+    it("should handle array header values", () => {
+      const context = {
+        session: {
+          headers: {
+            "x-airtable-workspace-id": ["wspFirst", "wspSecond"],
+          },
+        },
+      };
+      const result = extractWorkspaceId({}, context);
+      expect(result).toBe("wspFirst");
+    });
+  });
+
+  describe("parameter extraction (second priority)", () => {
+    it("should extract from workspaceId parameter", () => {
+      const result = extractWorkspaceId({ workspaceId: "wspFromParam" });
+      expect(result).toBe("wspFromParam");
+    });
+
+    it("should prefer parameter over environment variable", () => {
+      process.env.AIRTABLE_WORKSPACE_ID = "wspFromEnv";
+      const result = extractWorkspaceId({ workspaceId: "wspFromParam" });
+      expect(result).toBe("wspFromParam");
+    });
+  });
+
+  describe("environment variable extraction (fallback)", () => {
+    it("should extract from AIRTABLE_WORKSPACE_ID environment variable", () => {
+      process.env.AIRTABLE_WORKSPACE_ID = "wspFromEnv";
+      const result = extractWorkspaceId({});
+      expect(result).toBe("wspFromEnv");
+    });
+  });
+
+  describe("returns undefined when not found", () => {
+    it("should return undefined when no workspace ID is found", () => {
+      const result = extractWorkspaceId({});
+      expect(result).toBeUndefined();
+    });
+
+    it("should return undefined when context has empty headers", () => {
+      const context = { session: { headers: {} } };
+      const result = extractWorkspaceId({}, context);
+      expect(result).toBeUndefined();
     });
   });
 });

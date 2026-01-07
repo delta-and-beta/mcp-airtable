@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { extractApiKey } from "../lib/auth.js";
+import { extractApiKey, extractWorkspaceId } from "../lib/auth.js";
 import { AirtableClient } from "../lib/airtable.js";
 import { formatErrorResponse } from "../lib/errors.js";
 import type { FastMCP } from "fastmcp";
@@ -99,17 +99,23 @@ RETURNS:
     name: "create_base",
     description: `Create a new Airtable base in a workspace.
 
+WORKSPACE ID:
+workspaceId can be provided via (in priority order):
+1. x-airtable-workspace-id header (set once during session init)
+2. workspaceId parameter in this request
+3. AIRTABLE_WORKSPACE_ID environment variable
+
+To get a workspace ID:
+- list_workspaces tool (if available for your plan)
+- Airtable UI URL: airtable.com/wspXXXXXXXXXXXXXXX/... (copy the wsp... ID)
+
 REQUIREMENTS:
-- workspaceId is required. Get it via:
-  1. list_workspaces tool (if available for your plan)
-  2. Airtable UI URL: airtable.com/wspXXXXXXXXXXXXXXX/... (copy the wsp... ID)
 - At least one table with at least one field must be provided
 - The first field of the first table becomes the primary field
 
 EXAMPLE:
 {
   "name": "Project Tracker",
-  "workspaceId": "wspmhESAta6clCCwF",
   "tables": [
     {
       "name": "Tasks",
@@ -125,7 +131,7 @@ EXAMPLE:
 RETURNS: Base ID, name, and created tables with their IDs`,
     parameters: z.object({
       name: z.string().min(1).max(255).describe("Name for the new base"),
-      workspaceId: z.string().min(1).describe("Workspace ID (starts with 'wsp')"),
+      workspaceId: z.string().optional().describe("Workspace ID (starts with 'wsp'). Optional if set via x-airtable-workspace-id header"),
       tables: z
         .array(
           z.object({
@@ -151,10 +157,20 @@ RETURNS: Base ID, name, and created tables with their IDs`,
     execute: async (args, context) => {
       try {
         const apiKey = extractApiKey(args, context);
+        const workspaceId = extractWorkspaceId(args, context);
+
+        if (!workspaceId) {
+          return JSON.stringify({
+            error: "ValidationError",
+            message: "Workspace ID required. Provide via: (1) x-airtable-workspace-id header, (2) workspaceId parameter, or (3) AIRTABLE_WORKSPACE_ID env var.",
+            hint: "Get workspace ID from Airtable UI URL: airtable.com/wspXXXXXXXXXXXXXXX/..."
+          }, null, 2);
+        }
+
         const client = new AirtableClient(apiKey);
         const result = await client.createBase({
           name: args.name,
-          workspaceId: args.workspaceId,
+          workspaceId: workspaceId,
           tables: args.tables,
         });
 
