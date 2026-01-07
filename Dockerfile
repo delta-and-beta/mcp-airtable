@@ -15,6 +15,10 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
+# Fix Node.js fetch IPv6/IPv4 issues in Docker
+# Force DNS to resolve IPv4 only by using Google DNS
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
+
 # Install production dependencies only
 COPY package*.json ./
 RUN npm ci --production && npm cache clean --force
