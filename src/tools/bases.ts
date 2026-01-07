@@ -9,6 +9,50 @@ import { formatErrorResponse } from "../lib/errors.js";
 import type { FastMCP } from "fastmcp";
 
 export function registerBasesTools(server: FastMCP) {
+  // list_workspaces tool
+  server.addTool({
+    name: "list_workspaces",
+    description: `List all Airtable workspaces accessible with the provided API key.
+
+Use this to get workspace IDs needed for create_base.
+
+NOTE: This endpoint may require Enterprise plan or specific API scopes.
+If you get a 404 error, get workspace ID from the Airtable UI URL instead:
+- Open Airtable in browser
+- Navigate to the workspace
+- The URL will be: airtable.com/wspXXXXXXXXXXXXXXX/...
+- Copy the wsp... ID
+
+RETURNS:
+{
+  "workspaces": [
+    { "id": "wspmhESAta6clCCwF", "name": "My Workspace", "permissionLevel": "owner" }
+  ]
+}`,
+    parameters: z.object({
+      airtableApiKey: z.string().optional(),
+    }),
+    execute: async (args, context) => {
+      try {
+        const apiKey = extractApiKey(args, context);
+        const client = new AirtableClient(apiKey);
+        const workspaces = await client.listWorkspaces();
+
+        return JSON.stringify({ workspaces }, null, 2);
+      } catch (error: any) {
+        // Provide helpful error for 404/NOT_FOUND
+        if (error.statusCode === 404 || error.message?.includes("Not Found")) {
+          return JSON.stringify({
+            error: "WorkspacesAPIUnavailable",
+            message: "The workspaces API is not available for your account. This may require an Enterprise plan or specific API scopes.",
+            workaround: "Get workspace ID from the Airtable UI URL: Open Airtable browser > Navigate to workspace > Copy wspXXX from URL (airtable.com/wspXXXXXXXXXXXXXXX/...)"
+          }, null, 2);
+        }
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+      }
+    },
+  });
+
   // list_bases tool
   server.addTool({
     name: "list_bases",
@@ -56,7 +100,9 @@ export function registerBasesTools(server: FastMCP) {
     description: `Create a new Airtable base in a workspace.
 
 REQUIREMENTS:
-- workspaceId is required (get from Airtable workspace URL or list_bases response)
+- workspaceId is required. Get it via:
+  1. list_workspaces tool (if available for your plan)
+  2. Airtable UI URL: airtable.com/wspXXXXXXXXXXXXXXX/... (copy the wsp... ID)
 - At least one table with at least one field must be provided
 - The first field of the first table becomes the primary field
 

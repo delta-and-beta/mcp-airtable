@@ -67,6 +67,24 @@ export class AirtableClient {
     return data.bases || [];
   }
 
+  async listWorkspaces() {
+    const response = await fetchWithDetails("https://api.airtable.com/v0/meta/workspaces", {
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AirtableError(
+        (errorData as any).error?.message || `Failed to list workspaces: ${response.statusText}`,
+        response.status,
+        { endpoint: "listWorkspaces" }
+      );
+    }
+
+    const data: any = await response.json();
+    return data.workspaces || [];
+  }
+
   async listTables(baseId?: string) {
     const bid = baseId || this.baseId;
     if (!bid) throw new ValidationError("Base ID required");
