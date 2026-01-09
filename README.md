@@ -5,9 +5,9 @@
 ## Features
 
 ### Core Functionality
-- ✅ **10 Essential Tools** - Complete CRUD + batch operations
+- ✅ **21 Tools** - Complete CRUD, batch operations, schema management, comments
 - ✅ **Streamable-HTTP Transport** - Claude Desktop 2025+ native support
-- ✅ **Header-based Authentication** - API keys from Claude Desktop client
+- ✅ **Header-based Authentication** - API keys and workspace ID from client headers
 
 ### Production Ready
 - ✅ **Custom Error Classes** - Proper error handling with status codes
@@ -15,6 +15,7 @@
 - ✅ **Response Caching** - 5-10min TTL for metadata (list_bases, get_schema)
 - ✅ **Rate Limiting** - 60 req/min default, configurable
 - ✅ **Environment Validation** - Zod-validated configuration
+- ✅ **Sentry Integration** - Optional error tracking and request monitoring
 
 ### Security Hardening
 - ✅ **Formula Injection Prevention** - Blocks EVAL, EXEC, SQL patterns
@@ -79,14 +80,20 @@ See [`examples/`](./examples/) for complete configuration examples.
       "args": [
         "-y",
         "mcp-remote",
-        "http://localhost:3001/mcp",
+        "https://your-server.com/mcp",
         "--header",
-        "x-airtable-api-key:patXXXXX.XXXXX..."
+        "x-airtable-api-key:patXXXXX.XXXXX...",
+        "--header",
+        "x-airtable-workspace-id:wspXXXXXXXXXXXXXXX"
       ]
     }
   }
 }
 ```
+
+**Headers:**
+- `x-airtable-api-key` - Your Airtable Personal Access Token (required)
+- `x-airtable-workspace-id` - Default workspace for create_base (optional)
 
 #### Option 3: Remote Server (Claude.ai Web)
 
@@ -103,23 +110,40 @@ Deploy to any hosting provider, then connect via Claude.ai:
 
 **Get your API key:** https://airtable.com/create/tokens
 
-## Available Tools
+## Available Tools (21 Total)
 
-### Metadata Tools
+### Base & Workspace Management (4)
+- **list_workspaces** - List workspaces (Enterprise plan required, provides UI workaround)
 - **list_bases** - List all accessible Airtable bases
-- **list_tables** - List tables in a base with field definitions
-- **get_schema** - Get complete base schema (tables, fields, views)
+- **get_base_schema** - Get complete base schema (tables, fields, views)
+- **create_base** - Create new base in a workspace
 
-### Record Operations
+### Table Management (3)
+- **list_tables** - List tables in a base with field definitions
+- **create_table** - Create new table with fields
+- **update_table** - Update table name/description
+
+### Field Management (3)
+- **create_field** - Add field to existing table
+- **update_field** - Update field name/description
+- **upload_attachment** - Upload file to attachment field
+
+### Record Operations (5)
 - **get_records** - Query records with filtering and sorting
 - **get_record** - Get single record by ID
-- **create_record** - Create new records
+- **create_records** - Create new records
 - **update_record** - Update existing records
 - **delete_record** - Delete records permanently
 
-### Batch Operations
-- **batch_upsert** - Create or update up to 1000 records
-- **batch_delete** - Delete up to 1000 records
+### Batch Operations (2)
+- **upsert_records** - Create or update up to 1000 records
+- **delete_records** - Delete up to 1000 records
+
+### Comments (4)
+- **list_comments** - List comments on a record
+- **create_comment** - Add comment to a record
+- **update_comment** - Update existing comment
+- **delete_comment** - Delete comment
 
 ## Architecture
 
@@ -127,18 +151,26 @@ Deploy to any hosting provider, then connect via Claude.ai:
 src/
 ├── index.ts              # Entry point
 ├── server.ts             # FastMCP initialization
-├── tools/                # Tool definitions
-│   ├── bases.ts          # Metadata tools
-│   ├── tables.ts         # Table tools
-│   ├── records.ts        # CRUD operations
-│   └── batch.ts          # Batch operations
+├── tools/                # 21 tools across 6 files
+│   ├── bases.ts          # list_workspaces, list_bases, get_base_schema, create_base
+│   ├── tables.ts         # list_tables, create_table, update_table
+│   ├── fields.ts         # create_field, update_field, upload_attachment
+│   ├── records.ts        # get_records, get_record, create_records, update_record, delete_record
+│   ├── batch.ts          # upsert_records, delete_records
+│   └── comments.ts       # list_comments, create_comment, update_comment, delete_comment
 └── lib/                  # Utilities
-    ├── airtable.ts       # Airtable client
-    ├── auth.ts           # API key extraction
-    └── validation.ts     # Security sanitization
+    ├── airtable.ts       # Airtable API client
+    ├── auth.ts           # API key & workspace ID extraction
+    ├── validation.ts     # Security sanitization
+    ├── errors.ts         # Custom error classes
+    ├── logger.ts         # Structured logging
+    ├── cache.ts          # Response caching
+    ├── rate-limiter.ts   # Rate limiting
+    ├── config.ts         # Environment validation
+    └── sentry.ts         # Error tracking (optional)
 ```
 
-**Total: 8 files, ~450 lines of code**
+**Total: ~15 files, ~1200 lines of production code, 133 unit tests**
 
 ## Usage Examples
 
@@ -166,11 +198,16 @@ src/
 
 The server uses FastMCP's `authenticate` callback to capture HTTP headers and store them in the session, allowing tools to access headers via `context.session.headers`.
 
-**API key priority:**
-1. **Tool parameter** - `airtableApiKey` in request (explicit)
-2. **HTTP header** - `x-airtable-api-key` via session (recommended for HTTP)
-3. **Bearer token** - `Authorization: Bearer <token>` header
+**API key priority (header > parameter > env):**
+1. **HTTP header** - `x-airtable-api-key` via session (recommended for HTTP)
+2. **Bearer token** - `Authorization: Bearer <token>` header
+3. **Tool parameter** - `airtableApiKey` in request (explicit override)
 4. **Environment variable** - `AIRTABLE_API_KEY` (fallback for stdio)
+
+**Workspace ID priority (header > parameter > env):**
+1. **HTTP header** - `x-airtable-workspace-id` via session (set once)
+2. **Tool parameter** - `workspaceId` in request
+3. **Environment variable** - `AIRTABLE_WORKSPACE_ID` (fallback)
 
 ## Security Features
 
@@ -218,8 +255,9 @@ docker run -p 3000:3000 -e AIRTABLE_API_KEY=your_key mcp-airtable
 PORT=3000                              # Server port (default: 3000)
 NODE_ENV=production                    # Environment mode
 
-# Authentication
-AIRTABLE_API_KEY=                      # Optional server-level API key (not recommended - use headers)
+# Authentication (fallbacks - prefer headers in production)
+AIRTABLE_API_KEY=                      # Server-level API key (use x-airtable-api-key header instead)
+AIRTABLE_WORKSPACE_ID=                 # Default workspace (use x-airtable-workspace-id header instead)
 
 # Rate Limiting
 RATE_LIMIT_ENABLED=true                # Enable rate limiting (default: true)
@@ -233,9 +271,33 @@ CACHE_TTL_TABLES=300                   # list_tables cache TTL in seconds (defau
 
 # Logging
 LOG_LEVEL=info                         # Logging level: debug, info, warn, error (default: info)
+
+# Sentry Error Tracking (Optional)
+SENTRY_DSN=                            # Sentry DSN (leave empty to disable)
+SENTRY_DEBUG=false                     # Set to true to capture ALL MCP requests
+SENTRY_ENVIRONMENT=production          # Environment name
+SENTRY_TRACES_SAMPLE_RATE=0.1          # Sample rate 0-1 (default: 1.0 in debug, 0.1 in prod)
 ```
 
-**Note:** In production, API keys should come from **client headers**, not server environment variables. This enables multi-tenant usage.
+**Note:** In production, API keys and workspace IDs should come from **client headers**, not server environment variables. This enables multi-tenant usage.
+
+### Sentry Integration (Optional)
+
+Enable error tracking and request monitoring with Sentry:
+
+```bash
+# Enable Sentry
+SENTRY_DSN=https://xxx@o0.ingest.sentry.io/0
+
+# Debug mode - captures ALL MCP requests (useful for development)
+SENTRY_DEBUG=true
+```
+
+**Features:**
+- Automatic error capture with context
+- Optional debug mode for full request tracing
+- Sensitive data redaction (API keys never sent to Sentry)
+- Graceful shutdown with event flushing
 
 ## License
 

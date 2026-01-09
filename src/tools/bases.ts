@@ -48,7 +48,7 @@ RETURNS:
             workaround: "Get workspace ID from the Airtable UI URL: Open Airtable browser > Navigate to workspace > Copy wspXXX from URL (airtable.com/wspXXXXXXXXXXXXXXX/...)"
           }, null, 2);
         }
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "list_workspaces" }), null, 2);
       }
     },
   });
@@ -68,7 +68,7 @@ RETURNS:
 
         return JSON.stringify({ bases }, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "list_bases" }), null, 2);
       }
     },
   });
@@ -89,7 +89,7 @@ RETURNS:
 
         return JSON.stringify({ tables }, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "get_base_schema" }), null, 2);
       }
     },
   });
@@ -176,7 +176,7 @@ RETURNS: Base ID, name, and created tables with their IDs`,
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "create_base" }), null, 2);
       }
     },
   });

@@ -5,6 +5,18 @@
 
 import { FastMCP } from "fastmcp";
 import type { IncomingHttpHeaders } from "http";
+import {
+  initSentry,
+  isSentryEnabled,
+  isSentryDebug,
+  addMcpBreadcrumb,
+  captureException,
+  flushSentry,
+  setTag,
+} from "./lib/sentry.js";
+
+// Initialize Sentry early (before other imports that might throw)
+const sentryInitialized = initSentry();
 
 // Session data type - stores HTTP headers for tool access
 interface SessionData {
@@ -27,6 +39,20 @@ export const server = new FastMCP<SessionData>({
     const sessionId = request.headers["mcp-session-id"] as string | undefined;
     if (sessionId) {
       sessionActivity.set(sessionId, Date.now());
+
+      // Set Sentry tag for session tracking
+      if (isSentryEnabled()) {
+        setTag("mcp.session_id", sessionId);
+      }
+    }
+
+    // Add Sentry breadcrumb for authentication (debug mode captures all)
+    if (isSentryDebug()) {
+      addMcpBreadcrumb("authenticate", {
+        sessionId,
+        hasApiKey: !!request.headers["x-airtable-api-key"],
+        hasWorkspaceId: !!request.headers["x-airtable-workspace-id"],
+      });
     }
 
     // Capture HTTP headers and store in session
@@ -92,7 +118,12 @@ registerBatchTools(server);
 registerFieldsTools(server);
 registerCommentsTools(server);
 
-logger.info("MCP Airtable server initialized", { version: "1.0.0", tools: 20 });
+logger.info("MCP Airtable server initialized", {
+  version: "1.0.0",
+  tools: 21,
+  sentry: sentryInitialized,
+  sentryDebug: isSentryDebug(),
+});
 
 // Health check will be available via FastMCP's built-in endpoints
 
@@ -101,7 +132,13 @@ export function startServer(transport: "stdio" | "httpStream" = "httpStream") {
   const port = parseInt(process.env.PORT || "3000");
   const host = process.env.HOST || "0.0.0.0"; // Default to all interfaces for k8s
 
-  logger.info("Starting MCP Airtable server", { transport, host, port });
+  logger.info("Starting MCP Airtable server", {
+    transport,
+    host,
+    port,
+    sentry: isSentryEnabled(),
+    sentryDebug: isSentryDebug(),
+  });
 
   // Start session cleanup for HTTP transport (memory leak prevention)
   if (transport === "httpStream") {
@@ -111,6 +148,25 @@ export function startServer(transport: "stdio" | "httpStream" = "httpStream") {
       intervalMs: CLEANUP_INTERVAL_MS
     });
   }
+
+  // Set up graceful shutdown to flush Sentry events
+  const gracefulShutdown = async (signal: string) => {
+    logger.info(`Received ${signal}, shutting down gracefully...`);
+
+    // Stop session cleanup
+    stopSessionCleanup();
+
+    // Flush Sentry events before exit
+    if (isSentryEnabled()) {
+      logger.debug("Flushing Sentry events...");
+      await flushSentry(2000);
+    }
+
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
   server.start({
     transportType: transport,

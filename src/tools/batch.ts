@@ -120,7 +120,7 @@ export function registerBatchTools(server: FastMCP) {
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "upsert_records" }), null, 2);
       }
     },
   });
@@ -180,7 +180,7 @@ export function registerBatchTools(server: FastMCP) {
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "delete_records" }), null, 2);
       }
     },
   });

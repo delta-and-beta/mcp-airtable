@@ -22,10 +22,10 @@
   "author": "Delta & Beta",
   "license": "MIT",
   "dependencies": {
+    "@sentry/node": "^10.32.1",
     "airtable": "^0.12.2",
     "dotenv": "^16.4.5",
     "fastmcp": "^3.26.7",
-    "node-fetch": "^3.3.2",
     "zod": "^3.25.74"
   },
   "devDependencies": {

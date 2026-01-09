@@ -3,6 +3,8 @@
  * Uses MCP-standard JSON-RPC 2.0 error codes
  */
 
+import { captureException, addMcpBreadcrumb, isSentryDebug } from "./sentry.js";
+
 // MCP/JSON-RPC 2.0 Error Codes
 export const MCP_ERROR_CODES = {
   // MCP-specific errors (-32000 to -32099)
@@ -164,8 +166,26 @@ export function formatMcpError(error: Error): McpErrorResponse {
 
 /**
  * Format error response (legacy format for tool responses)
+ * Also captures errors in Sentry when enabled
  */
-export function formatErrorResponse(error: Error): LegacyErrorResponse {
+export function formatErrorResponse(error: Error, context?: { tool?: string; [key: string]: unknown }): LegacyErrorResponse {
+  // Capture error in Sentry (skip validation errors in non-debug mode)
+  const shouldCapture = !(error instanceof ValidationError) || isSentryDebug();
+  if (shouldCapture) {
+    captureException(error, {
+      tool: context?.tool,
+      errorType: error.name,
+      ...context,
+    });
+  }
+
+  // Add breadcrumb for error tracking
+  addMcpBreadcrumb("error", {
+    errorType: error.name,
+    message: error.message,
+    tool: context?.tool,
+  }, "error");
+
   if (error instanceof AirtableError) {
     return {
       error: error.name,

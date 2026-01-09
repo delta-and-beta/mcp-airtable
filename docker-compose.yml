@@ -10,8 +10,16 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # IPv4 fix for Docker networking
+      - NODE_OPTIONS=--dns-result-order=ipv4first
       # Optional: Set default API key (not recommended - use per-request headers)
       # - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+      # - AIRTABLE_WORKSPACE_ID=${AIRTABLE_WORKSPACE_ID}
+      # Sentry Error Tracking (Optional - leave empty to disable)
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_DEBUG=${SENTRY_DEBUG:-false}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     restart: unless-stopped
     # Resource limits for production
     deploy:

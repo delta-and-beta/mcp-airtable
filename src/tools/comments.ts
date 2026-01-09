@@ -61,7 +61,7 @@ EXAMPLE:
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "list_comments" }), null, 2);
       }
     },
   });
@@ -116,7 +116,7 @@ EXAMPLE:
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "create_comment" }), null, 2);
       }
     },
   });
@@ -172,7 +172,7 @@ EXAMPLE:
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "update_comment" }), null, 2);
       }
     },
   });
@@ -223,7 +223,7 @@ EXAMPLE:
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "delete_comment" }), null, 2);
       }
     },
   });

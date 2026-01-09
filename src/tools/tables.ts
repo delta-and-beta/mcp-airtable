@@ -25,7 +25,7 @@ export function registerTablesTools(server: FastMCP) {
 
         return JSON.stringify({ tables }, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "list_tables" }), null, 2);
       }
     },
   });
@@ -90,7 +90,7 @@ RETURNS: Table ID, name, primary field ID, fields, and views`,
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "create_table" }), null, 2);
       }
     },
   });
@@ -133,7 +133,7 @@ RETURNS: Updated table with id, name, fields, views, and description`,
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "update_table" }), null, 2);
       }
     },
   });

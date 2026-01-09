@@ -33,7 +33,7 @@ export function registerRecordsTools(server: FastMCP) {
 
         return JSON.stringify({ records }, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "get_records" }), null, 2);
       }
     },
   });
@@ -94,7 +94,7 @@ EXAMPLE - Create multiple records:
 
         return JSON.stringify({ records, count: records.length }, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "create_records" }), null, 2);
       }
     },
   });
@@ -127,7 +127,7 @@ EXAMPLE - Create multiple records:
 
         return JSON.stringify(record, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "update_record" }), null, 2);
       }
     },
   });
@@ -151,7 +151,7 @@ EXAMPLE - Create multiple records:
 
         return JSON.stringify(record, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "get_record" }), null, 2);
       }
     },
   });
@@ -175,7 +175,7 @@ EXAMPLE - Create multiple records:
 
         return JSON.stringify(result, null, 2);
       } catch (error) {
-        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error))), null, 2);
+        return JSON.stringify(formatErrorResponse(error instanceof Error ? error : new Error(String(error)), { tool: "delete_record" }), null, 2);
       }
     },
   });
