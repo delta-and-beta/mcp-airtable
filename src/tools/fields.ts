@@ -188,7 +188,8 @@ export function registerFieldsTools(server: FastMCP) {
       } catch (error) {
         return JSON.stringify(
           formatErrorResponse(
-            error instanceof Error ? error : new Error(String(error))
+            error instanceof Error ? error : new Error(String(error)),
+            { tool: "create_field" }
           ),
           null,
           2
@@ -249,7 +250,8 @@ export function registerFieldsTools(server: FastMCP) {
       } catch (error) {
         return JSON.stringify(
           formatErrorResponse(
-            error instanceof Error ? error : new Error(String(error))
+            error instanceof Error ? error : new Error(String(error)),
+            { tool: "update_field" }
           ),
           null,
           2
@@ -339,7 +341,8 @@ export function registerFieldsTools(server: FastMCP) {
       } catch (error) {
         return JSON.stringify(
           formatErrorResponse(
-            error instanceof Error ? error : new Error(String(error))
+            error instanceof Error ? error : new Error(String(error)),
+            { tool: "upload_attachment" }
           ),
           null,
           2

@@ -60,14 +60,14 @@ This server natively supports both **stdio** (local) and **Streamable HTTP** (re
 
 ## Option 2: Remote HTTP - Claude Desktop with mcp-remote
 
-**Best for:** Testing HTTP transport locally before cloud deployment
+**Best for:** Production deployment, multi-user, remote access
 
 ### Setup
 
-1. Start the HTTP server:
+1. Start the HTTP server (or use deployed endpoint):
    ```bash
    cd mcp-airtable
-   PORT=3001 npm start
+   npm start  # Starts on port 3000
    ```
 
 2. Configure Claude Desktop to use `mcp-remote`:
@@ -80,9 +80,11 @@ This server natively supports both **stdio** (local) and **Streamable HTTP** (re
       "args": [
         "-y",
         "mcp-remote",
-        "http://localhost:3001/mcp",
+        "https://mcp-airtable.tailb1bee0.ts.net/mcp",
         "--header",
-        "x-airtable-api-key:patXXXXXXXXXXXXXX.YOUR_TOKEN_HERE"
+        "x-airtable-api-key:patXXXXXXXXXXXXXX.YOUR_TOKEN_HERE",
+        "--header",
+        "x-airtable-workspace-id:wspXXXXXXXXXXXXXXX"
       ]
     }
   }
@@ -91,10 +93,15 @@ This server natively supports both **stdio** (local) and **Streamable HTTP** (re
 
 3. Restart Claude Desktop
 
+### Headers
+
+- `x-airtable-api-key` - Your Airtable Personal Access Token (required)
+- `x-airtable-workspace-id` - Default workspace for create_base (optional)
+
 ### How It Works
 
 - `mcp-remote` bridges stdio (Claude Desktop) to HTTP (server)
-- API key passed via `--header` flag
+- API key and workspace ID passed via `--header` flags
 - Server captures headers via FastMCP's `authenticate` callback
 - Headers available to tools via `context.session.headers`
 
@@ -170,17 +177,22 @@ server.addTool({
 
 ### Priority Order
 
-API key extraction follows this priority:
-1. `airtableApiKey` parameter in tool call (explicit)
-2. `x-airtable-api-key` HTTP header (via session)
-3. `Authorization: Bearer <token>` header (OAuth-style)
+**API key extraction (header > parameter > env):**
+1. `x-airtable-api-key` HTTP header (via session - recommended)
+2. `Authorization: Bearer <token>` header (OAuth-style)
+3. `airtableApiKey` parameter in tool call (explicit override)
 4. `AIRTABLE_API_KEY` environment variable (fallback)
+
+**Workspace ID extraction (header > parameter > env):**
+1. `x-airtable-workspace-id` HTTP header (via session - set once)
+2. `workspaceId` parameter in tool call
+3. `AIRTABLE_WORKSPACE_ID` environment variable (fallback)
 
 ---
 
 ## Deployment Examples
 
-### Docker
+### Docker + Tailscale Funnel (Recommended)
 
 ```dockerfile
 FROM node:20-alpine
@@ -189,19 +201,26 @@ COPY package*.json ./
 RUN npm ci --production
 COPY dist ./dist
 EXPOSE 3000
+# IPv4 fix for Docker networking
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
 CMD ["node", "dist/index.js"]
 ```
 
 ```bash
 docker build -t mcp-airtable .
 docker run -p 3000:3000 mcp-airtable
+
+# With Sentry error tracking (optional)
+docker run -p 3000:3000 \
+  -e SENTRY_DSN=https://xxx@o0.ingest.sentry.io/0 \
+  -e SENTRY_DEBUG=true \
+  mcp-airtable
+
+# Expose via Tailscale Funnel
+tailscale funnel 3000
 ```
 
-### Zeabur
-
-```bash
-npx zeabur deploy
-```
+**Current deployment:** `https://mcp-airtable.tailb1bee0.ts.net/mcp`
 
 ### Railway / Render / Fly.io
 
@@ -243,6 +262,7 @@ GET  /mcp  - Listen for server-initiated messages (optional)
 | `MCP-Protocol-Version` | Yes | `2025-11-25` (on all requests) |
 | `MCP-Session-Id` | After init | Session ID from server |
 | `x-airtable-api-key` | Yes | Your Airtable API key |
+| `x-airtable-workspace-id` | Optional | Default workspace for create_base |
 
 ### Request Format
 ```http
