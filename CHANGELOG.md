@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Downloads from Airtable CDN and validates integrity
   - Checks magic bytes (`%PDF-`) and file size match
   - Records preserved after test for manual review
+- **Retry with Exponential Backoff**: Automatic retry for transient failures
+  - Retries on HTTP 429, 500, 502, 503, 504 errors
+  - Retries on network errors (ECONNRESET, ETIMEDOUT, ECONNREFUSED)
+  - Respects Retry-After header for rate limits
+  - Configurable max retries, delays, and jitter
+  - 25 new unit tests for retry logic
 
 ### Changed
 - Consolidated types from `src/types.ts` into `src/lib/airtable/types.ts`
