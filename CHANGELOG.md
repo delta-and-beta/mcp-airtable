@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable max connections (default: 10), keep-alive timeouts
   - HTTP agent stats integrated into health check system
   - `pooledFetch` utility for automatic connection reuse
+- **Idempotency Keys**: Safe retries for write operations
+  - Generate unique keys based on operation + params hash
+  - Track pending/completed/failed operations
+  - Automatic TTL expiration and LRU eviction
+  - `withIdempotency()` wrapper for automatic tracking
+  - Returns cached results for duplicate completed operations
+  - 26 new unit tests for idempotency module
 - **Modular Architecture**: Refactored Airtable client into modular components (`src/lib/airtable/`)
   - `client.ts` - Main AirtableClient class
   - `fetch.ts` - Fetch utility with detailed error handling
