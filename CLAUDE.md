@@ -206,6 +206,27 @@ Error types:
 - `AirtableError` - Airtable API errors (includes status code)
 - `RateLimitError` - Rate limit exceeded (includes retryAfter)
 
+## Retry with Exponential Backoff
+
+All API requests automatically retry on transient failures:
+
+**Retryable HTTP Status Codes:** 429, 500, 502, 503, 504
+
+**Retryable Network Errors:** ECONNRESET, ETIMEDOUT, ECONNREFUSED, EPIPE, EAI_AGAIN
+
+**Default Configuration:**
+- Max retries: 3
+- Initial delay: 1000ms
+- Max delay: 30000ms
+- Jitter: 10% (prevents thundering herd)
+
+**Retry-After Header:** Automatically respected for 429 rate limits
+
+**Disable retry for specific requests:**
+```typescript
+await fetchWithDetails(url, { noRetry: true });
+```
+
 ## Security
 
 ### Input Validation
@@ -260,7 +281,7 @@ npm run dev
 
 ### Unit Tests
 
-133 unit tests with 100% coverage on lib utilities:
+158 unit tests with 100% coverage on lib utilities:
 - `validation.test.ts` - Security validation (28 tests)
 - `errors.test.ts` - Error formatting (19 tests)
 - `rate-limiter.test.ts` - Rate limiting (11 tests)
@@ -268,6 +289,7 @@ npm run dev
 - `auth.test.ts` - API key & workspace ID extraction (32 tests)
 - `batch.test.ts` - Batch operations (9 tests)
 - `fields.test.ts` - Field management (18 tests)
+- `retry.test.ts` - Retry with exponential backoff (25 tests)
 
 ### End-to-End Tests (25 tests)
 
