@@ -4,6 +4,7 @@
  */
 
 import { getAllCircuitBreakerStats, CircuitState, type CircuitBreakerStats } from "./circuit-breaker.js";
+import { getHttpAgentStats, type HttpAgentStats } from "./http-agent.js";
 import { logger } from "./logger.js";
 
 export enum HealthStatus {
@@ -27,6 +28,7 @@ export interface HealthCheckResult {
   components: {
     circuitBreakers: ComponentHealth;
     memory: ComponentHealth;
+    httpAgent: ComponentHealth;
   };
   stats: {
     activeSessions: number;
@@ -37,6 +39,7 @@ export interface HealthCheckResult {
       rss: number;
       external: number;
     };
+    httpAgent: HttpAgentStats | null;
   };
 }
 
@@ -137,6 +140,7 @@ export function checkReadiness(): ReadinessResult {
 export function checkHealth(version: string = "1.0.0"): HealthCheckResult {
   const circuitStats = getAllCircuitBreakerStats();
   const memUsage = process.memoryUsage();
+  const httpAgentStats = getHttpAgentStats();
 
   // Evaluate circuit breaker health
   const circuitBreakerHealth = evaluateCircuitBreakerHealth(circuitStats);
@@ -144,8 +148,15 @@ export function checkHealth(version: string = "1.0.0"): HealthCheckResult {
   // Evaluate memory health
   const memoryHealth = evaluateMemoryHealth(memUsage);
 
+  // Evaluate HTTP agent health
+  const httpAgentHealth = evaluateHttpAgentHealth(httpAgentStats);
+
   // Overall status is the worst of all components
-  const overallStatus = getWorstStatus([circuitBreakerHealth.status, memoryHealth.status]);
+  const overallStatus = getWorstStatus([
+    circuitBreakerHealth.status,
+    memoryHealth.status,
+    httpAgentHealth.status,
+  ]);
 
   const result: HealthCheckResult = {
     status: overallStatus,
@@ -155,6 +166,7 @@ export function checkHealth(version: string = "1.0.0"): HealthCheckResult {
     components: {
       circuitBreakers: circuitBreakerHealth,
       memory: memoryHealth,
+      httpAgent: httpAgentHealth,
     },
     stats: {
       activeSessions,
@@ -165,6 +177,7 @@ export function checkHealth(version: string = "1.0.0"): HealthCheckResult {
         rss: memUsage.rss,
         external: memUsage.external,
       },
+      httpAgent: httpAgentStats,
     },
   };
 
@@ -174,6 +187,7 @@ export function checkHealth(version: string = "1.0.0"): HealthCheckResult {
       status: overallStatus,
       circuitBreakers: circuitBreakerHealth.status,
       memory: memoryHealth.status,
+      httpAgent: httpAgentHealth.status,
     });
   }
 
@@ -256,6 +270,41 @@ function evaluateMemoryHealth(memUsage: NodeJS.MemoryUsage): ComponentHealth {
 }
 
 /**
+ * Evaluate HTTP agent health
+ */
+function evaluateHttpAgentHealth(stats: HttpAgentStats | null): ComponentHealth {
+  if (!stats) {
+    return {
+      status: HealthStatus.HEALTHY,
+      message: "HTTP agent not initialized",
+      lastCheck: Date.now(),
+      details: { initialized: false },
+    };
+  }
+
+  // Check for connection pool issues
+  const pendingRatio = stats.totalConnections > 0
+    ? stats.pendingRequests / stats.totalConnections
+    : 0;
+
+  if (pendingRatio > 5) {
+    return {
+      status: HealthStatus.DEGRADED,
+      message: `High pending request ratio: ${pendingRatio.toFixed(1)}`,
+      lastCheck: Date.now(),
+      details: { ...stats },
+    };
+  }
+
+  return {
+    status: HealthStatus.HEALTHY,
+    message: `HTTP agent OK: ${stats.totalConnections} connections`,
+    lastCheck: Date.now(),
+    details: { ...stats },
+  };
+}
+
+/**
  * Get the worst status from a list
  */
 function getWorstStatus(statuses: HealthStatus[]): HealthStatus {
@@ -284,6 +333,7 @@ export function formatHealthResult(result: HealthCheckResult): string {
     "Components:",
     `  Circuit Breakers: ${result.components.circuitBreakers.status} - ${result.components.circuitBreakers.message}`,
     `  Memory: ${result.components.memory.status} - ${result.components.memory.message}`,
+    `  HTTP Agent: ${result.components.httpAgent.status} - ${result.components.httpAgent.message}`,
     "",
     "Stats:",
     `  Active Sessions: ${result.stats.activeSessions}`,
