@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `withIdempotency()` wrapper for automatic tracking
   - Returns cached results for duplicate completed operations
   - 26 new unit tests for idempotency module
+- **Request Deduplication**: Prevents duplicate concurrent requests
+  - Shares results between identical concurrent requests
+  - Only deduplicates safe methods (GET, HEAD, OPTIONS)
+  - Automatic cleanup of expired pending requests
+  - Stats tracking for monitoring deduplication effectiveness
+  - 21 new unit tests for deduplication module
 - **Modular Architecture**: Refactored Airtable client into modular components (`src/lib/airtable/`)
   - `client.ts` - Main AirtableClient class
   - `fetch.ts` - Fetch utility with detailed error handling
