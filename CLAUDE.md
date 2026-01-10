@@ -377,6 +377,32 @@ Get credentials from `~/Library/Application Support/Claude/claude_desktop_config
 
 **Note:** Each test run creates a new base (Testing 1, Testing 2, etc.). Delete unused test bases manually from the Airtable UI.
 
+## Development Workflow
+
+### Feature Completion Checklist
+
+**IMPORTANT:** After completing any feature, always run both unit and e2e tests before merging:
+
+```bash
+# 1. Run unit tests
+npm test
+
+# 2. Extract credentials from Claude Desktop config and run e2e tests
+# Note: Credentials are in --header args, not env vars
+export AIRTABLE_API_KEY=$(cat "/Users/$USER/Library/Application Support/Claude/claude_desktop_config.json" | jq -r '.mcpServers["mcp-airtable"].args[]' | grep "x-airtable-api-key" | cut -d: -f2)
+export AIRTABLE_WORKSPACE_ID=$(cat "/Users/$USER/Library/Application Support/Claude/claude_desktop_config.json" | jq -r '.mcpServers["mcp-airtable"].args[]' | grep "x-airtable-workspace-id" | cut -d: -f2)
+
+# 3. Run e2e tests
+npm run test:e2e
+
+# 4. Only merge if all tests pass
+```
+
+**Why e2e tests matter:**
+- Unit tests verify internal logic but not actual Airtable API integration
+- E2e tests catch issues with API changes, authentication, rate limiting
+- E2e tests verify the full request/response cycle works correctly
+
 ## Important Notes
 
 ### stdio Transport Requirements
