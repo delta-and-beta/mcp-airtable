@@ -152,7 +152,12 @@ execute: async (args, context) => {
 2. `workspaceId` parameter in tool call
 3. `AIRTABLE_WORKSPACE_ID` environment variable (fallback)
 
-## Tool Categories (21 Total)
+## Tool Categories (24 Total)
+
+### Health & Monitoring (3)
+- `health_check` - Detailed health status (circuit breakers, memory, uptime)
+- `liveness` - Liveness probe (is service running?)
+- `readiness` - Readiness probe (is service ready to accept requests?)
 
 ### Base & Workspace Management (4)
 - `list_workspaces` - List workspaces (Enterprise plan required, provides UI workaround)

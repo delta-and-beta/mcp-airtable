@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Health Check Endpoint**: Service health monitoring for k8s/container orchestration
+  - `health_check` tool for detailed status (circuit breakers, memory, uptime)
+  - `liveness` probe for simple alive check
+  - `readiness` probe for service readiness check
+  - Session tracking and memory usage reporting
+  - 15 new unit tests for health module
 - **Circuit Breaker Pattern**: Prevents cascading failures with automatic recovery
   - Three states: CLOSED (normal), OPEN (failing fast), HALF_OPEN (testing recovery)
   - Configurable failure threshold, reset timeout, success threshold
