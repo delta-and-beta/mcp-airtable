@@ -403,6 +403,29 @@ npm run test:e2e
 - E2e tests catch issues with API changes, authentication, rate limiting
 - E2e tests verify the full request/response cycle works correctly
 
+### E2E Test Result Summary
+
+After running e2e tests, always summarize results in a table format:
+
+| Metric | Result |
+|--------|--------|
+| Unit Tests | X passed |
+| E2E Tests | X passed |
+| Test Base | [Testing N](https://airtable.com/appXXXXXXXXXXXXX) |
+| Records Created | X |
+| Duration | Xs |
+
+**Example:**
+| Metric | Result |
+|--------|--------|
+| Unit Tests | 272 passed |
+| E2E Tests | 25 passed |
+| Test Base | [Testing 8](https://airtable.com/appwrfoyFCetjF3H1) |
+| Records Created | 204 |
+| Duration | 28s |
+
+**Note:** Test bases are preserved for review. Delete manually from Airtable when no longer needed.
+
 ## Important Notes
 
 ### stdio Transport Requirements
