@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Creates 200 records in 20 batches of 10
   - Tests rate limiting with 100ms delay between batches
   - Verifies all records created successfully
+- **PDF Upload/Download Validation Test**: New e2e test for PDF attachments
+  - Creates minimal valid PDF, uploads to Airtable
+  - Downloads from Airtable CDN and validates integrity
+  - Checks magic bytes (`%PDF-`) and file size match
+  - Records preserved after test for manual review
 
 ### Changed
 - Consolidated types from `src/types.ts` into `src/lib/airtable/types.ts`
