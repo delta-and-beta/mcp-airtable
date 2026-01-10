@@ -124,32 +124,11 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
       console.log("   Future test runs will create new bases: Testing 2, Testing 3, etc.");
     }
 
-    // Cleanup records within the test base
-    if (createdRecordIds.length > 0 && testBaseId) {
-      console.log(`Cleaning up ${createdRecordIds.length} test records...`);
-      try {
-        const Airtable = (await import("airtable")).default;
-        const base = new Airtable({ apiKey: API_KEY }).base(testBaseId);
-        const table = base(testTableName);
-
-        for (let i = 0; i < createdRecordIds.length; i += 10) {
-          const chunk = createdRecordIds.slice(i, i + 10);
-          try {
-            await table.destroy(chunk);
-            // Add small delay to avoid rate limiting during cleanup
-            if (i + 10 < createdRecordIds.length) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-          } catch {
-            // Ignore errors during cleanup
-          }
-        }
-        console.log(`Cleaned up ${createdRecordIds.length} records`);
-      } catch (error) {
-        console.log("Cleanup warning:", error);
-      }
+    // Skip record cleanup to allow viewing results in Airtable
+    if (createdRecordIds.length > 0) {
+      console.log(`   ${createdRecordIds.length} records were created and preserved for review.`);
     }
-  }, 120000); // 2 minute timeout for cleanup of 200+ records
+  }, 10000);
 
   describe("Base Operations", () => {
     it("list_bases - should list accessible bases including test base", async () => {
