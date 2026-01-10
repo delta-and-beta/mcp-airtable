@@ -3,7 +3,7 @@
  */
 
 import { logger } from "../logger.js";
-import { fetchWithRetry, type RetryOptions } from "../retry.js";
+import { fetchWithRetry, isTimeoutError, type RetryOptions } from "../retry.js";
 
 interface FetchErrorDetails {
   message: string;
@@ -25,6 +25,8 @@ export interface FetchOptions extends RequestInit {
   retry?: RetryOptions;
   /** Disable retry (useful for non-idempotent requests) */
   noRetry?: boolean;
+  /** Timeout in milliseconds per request attempt (default: 30000) */
+  timeoutMs?: number;
 }
 
 /**
@@ -40,7 +42,13 @@ export async function fetchWithDetails(
   url: string,
   options: FetchOptions = {}
 ): Promise<Response> {
-  const { retry, noRetry, ...fetchOptions } = options;
+  const { retry, noRetry, timeoutMs, ...fetchOptions } = options;
+
+  // Merge timeout into retry options
+  const retryOptions: RetryOptions = {
+    ...retry,
+    ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+  };
 
   try {
     // Use retry wrapper unless explicitly disabled
@@ -48,8 +56,14 @@ export async function fetchWithDetails(
       return await fetch(url, fetchOptions);
     }
 
-    return await fetchWithRetry(url, fetchOptions, retry);
+    return await fetchWithRetry(url, fetchOptions, retryOptions);
   } catch (error: unknown) {
+    // Re-throw TimeoutError as-is (already has good message)
+    if (isTimeoutError(error)) {
+      logger.error("Fetch timed out", { url, timeoutMs: error.timeoutMs });
+      throw error;
+    }
+
     const err = error as Error & { cause?: FetchErrorCause };
     // Extract detailed error info for debugging
     const cause = err.cause;

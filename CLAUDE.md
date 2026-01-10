@@ -205,6 +205,7 @@ Error types:
 - `ValidationError` - Invalid input parameters
 - `AirtableError` - Airtable API errors (includes status code)
 - `RateLimitError` - Rate limit exceeded (includes retryAfter)
+- `TimeoutError` - Request timed out (includes timeoutMs, url)
 
 ## Retry with Exponential Backoff
 
@@ -214,13 +215,23 @@ All API requests automatically retry on transient failures:
 
 **Retryable Network Errors:** ECONNRESET, ETIMEDOUT, ECONNREFUSED, EPIPE, EAI_AGAIN
 
+**Retryable Errors:** Timeout errors (request exceeds configured timeout)
+
 **Default Configuration:**
 - Max retries: 3
 - Initial delay: 1000ms
 - Max delay: 30000ms
 - Jitter: 10% (prevents thundering herd)
+- **Timeout: 30000ms per request attempt**
 
 **Retry-After Header:** Automatically respected for 429 rate limits
+
+**Request Timeout:** Each request attempt has its own timeout using AbortController. If a request exceeds the timeout, it throws `TimeoutError` and can be retried.
+
+**Custom timeout for specific requests:**
+```typescript
+await fetchWithDetails(url, { timeoutMs: 60000 }); // 60 second timeout
+```
 
 **Disable retry for specific requests:**
 ```typescript

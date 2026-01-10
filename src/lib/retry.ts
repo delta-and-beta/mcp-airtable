@@ -3,6 +3,7 @@
  */
 
 import { logger } from "./logger.js";
+import { TimeoutError } from "./errors.js";
 
 export interface RetryOptions {
   /** Maximum number of retry attempts (default: 3) */
@@ -17,6 +18,8 @@ export interface RetryOptions {
   retryableStatuses?: number[];
   /** Network error codes that should trigger retry */
   retryableErrorCodes?: string[];
+  /** Timeout in milliseconds per request attempt (default: 30000) */
+  timeoutMs?: number;
 }
 
 export interface RetryResult<T> {
@@ -32,6 +35,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   jitterFactor: 0.1,
   retryableStatuses: [429, 500, 502, 503, 504],
   retryableErrorCodes: ["ECONNRESET", "ETIMEDOUT", "ECONNREFUSED", "EPIPE", "EAI_AGAIN"],
+  timeoutMs: 30000,
 };
 
 /**
@@ -164,8 +168,44 @@ function isRetryableNetworkError(error: unknown, retryableCodes: string[]): bool
 }
 
 /**
+ * Execute fetch with timeout using AbortController
+ * Each request attempt gets its own timeout
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new TimeoutError(`Request timed out after ${timeoutMs}ms`, timeoutMs, url);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Check if an error is a timeout error (retryable)
+ */
+export function isTimeoutError(error: unknown): error is TimeoutError {
+  return error instanceof TimeoutError;
+}
+
+/**
  * Execute a fetch request with retry logic
  * Handles both network errors and HTTP error responses
+ * Each retry attempt has its own timeout
  */
 export async function fetchWithRetry(
   url: string,
@@ -179,7 +219,7 @@ export async function fetchWithRetry(
 
   for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
     try {
-      const response = await fetch(url, options);
+      const response = await fetchWithTimeout(url, options, opts.timeoutMs);
 
       // Check if response status is retryable
       if (isRetryableStatus(response.status, opts.retryableStatuses)) {
@@ -224,8 +264,10 @@ export async function fetchWithRetry(
     } catch (error) {
       lastError = error as Error;
 
-      // Check if network error is retryable
-      const shouldRetry = attempt < opts.maxRetries && isRetryableNetworkError(error, opts.retryableErrorCodes);
+      // Check if error is retryable (network error or timeout)
+      const isNetworkRetryable = isRetryableNetworkError(error, opts.retryableErrorCodes);
+      const isTimeout = isTimeoutError(error);
+      const shouldRetry = attempt < opts.maxRetries && (isNetworkRetryable || isTimeout);
 
       if (!shouldRetry) {
         throw error;
@@ -234,11 +276,13 @@ export async function fetchWithRetry(
       const delay = calculateBackoff(attempt, opts.initialDelayMs, opts.maxDelayMs, opts.jitterFactor);
       totalDelayMs += delay;
 
-      logger.warn("Retrying after network error", {
+      const errorType = isTimeout ? "timeout" : "network error";
+      logger.warn(`Retrying after ${errorType}`, {
         attempt: attempt + 1,
         maxRetries: opts.maxRetries,
         delayMs: delay,
         error: lastError.message,
+        timeoutMs: isTimeout ? opts.timeoutMs : undefined,
       });
 
       await sleep(delay);
