@@ -4,6 +4,7 @@
 
 import { logger } from "./logger.js";
 import { TimeoutError } from "./errors.js";
+import { pooledFetch } from "./http-agent.js";
 
 export interface RetryOptions {
   /** Maximum number of retry attempts (default: 3) */
@@ -170,6 +171,7 @@ function isRetryableNetworkError(error: unknown, retryableCodes: string[]): bool
 /**
  * Execute fetch with timeout using AbortController
  * Each request attempt gets its own timeout
+ * Uses pooled connections for better performance
  */
 async function fetchWithTimeout(
   url: string,
@@ -180,7 +182,8 @@ async function fetchWithTimeout(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(url, {
+    // Use pooledFetch for connection reuse
+    const response = await pooledFetch(url, {
       ...options,
       signal: controller.signal,
     });
