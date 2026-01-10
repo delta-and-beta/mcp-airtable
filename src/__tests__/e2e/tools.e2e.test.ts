@@ -124,32 +124,11 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
       console.log("   Future test runs will create new bases: Testing 2, Testing 3, etc.");
     }
 
-    // Cleanup records within the test base
-    if (createdRecordIds.length > 0 && testBaseId) {
-      console.log(`Cleaning up ${createdRecordIds.length} test records...`);
-      try {
-        const Airtable = (await import("airtable")).default;
-        const base = new Airtable({ apiKey: API_KEY }).base(testBaseId);
-        const table = base(testTableName);
-
-        for (let i = 0; i < createdRecordIds.length; i += 10) {
-          const chunk = createdRecordIds.slice(i, i + 10);
-          try {
-            await table.destroy(chunk);
-            // Add small delay to avoid rate limiting during cleanup
-            if (i + 10 < createdRecordIds.length) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-          } catch {
-            // Ignore errors during cleanup
-          }
-        }
-        console.log(`Cleaned up ${createdRecordIds.length} records`);
-      } catch (error) {
-        console.log("Cleanup warning:", error);
-      }
+    // Skip record cleanup to allow viewing results in Airtable
+    if (createdRecordIds.length > 0) {
+      console.log(`   ${createdRecordIds.length} records were created and preserved for review.`);
     }
-  }, 120000); // 2 minute timeout for cleanup of 200+ records
+  }, 10000);
 
   describe("Base Operations", () => {
     it("list_bases - should list accessible bases including test base", async () => {
@@ -594,6 +573,114 @@ describe.skipIf(skipTests)("E2E: MCP Airtable Tools", () => {
         `Uploaded PNG: ${attachment.id}${attachment.width ? ` (${attachment.width}x${attachment.height})` : ""}`
       );
     });
+
+    it("upload_attachment - should upload PDF and validate download", async () => {
+      if (!attachmentFieldId || !attachmentRecordId) {
+        console.log("Skipping: Prerequisites not met (need field and record from previous test)");
+        return;
+      }
+
+      // Use a minimal valid PDF (single blank page) embedded directly
+      // This avoids external URL dependencies and makes the test reliable
+      // PDF structure: header, catalog, pages, page, content stream, xref, trailer
+      const minimalPdf = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >> endobj
+4 0 obj << /Length 44 >> stream
+BT /F1 12 Tf 100 700 Td (Test PDF) Tj ET
+endstream endobj
+xref
+0 5
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000206 00000 n
+trailer << /Size 5 /Root 1 0 R >>
+startxref
+300
+%%EOF`;
+
+      const pdfBuffer = Buffer.from(minimalPdf, "utf-8");
+      const originalSize = pdfBuffer.length;
+      const base64Data = pdfBuffer.toString("base64");
+      console.log(`Created minimal PDF: ${originalSize} bytes`);
+
+      // Verify it's a valid PDF (check magic bytes: %PDF-)
+      const pdfMagicBytes = pdfBuffer.subarray(0, 5).toString("ascii");
+      expect(pdfMagicBytes).toBe("%PDF-");
+      console.log(`PDF magic bytes verified: ${pdfMagicBytes}`);
+
+      const https = await import("https");
+
+      // Step 1: Upload PDF to Airtable
+      const result = await client.uploadAttachment(attachmentRecordId, attachmentFieldId!, {
+        base64Data,
+        filename: "sample-test.pdf",
+        contentType: "application/pdf",
+      });
+
+      expect(result).toHaveProperty("id");
+      expect(result).toHaveProperty("fields");
+
+      // Get the attachments from the response (should now have 3: txt, png, pdf)
+      const fieldKey = Object.keys(result.fields)[0];
+      const attachments = result.fields[fieldKey] as any[];
+      expect(attachments.length).toBe(3);
+
+      // Get the newly added PDF (last one)
+      const attachment = attachments[attachments.length - 1];
+      expect(attachment).toHaveProperty("id");
+      expect(attachment.id).toMatch(/^att/);
+      expect(attachment.filename).toBe("sample-test.pdf");
+      expect(attachment.type).toBe("application/pdf");
+      expect(attachment.size).toBe(originalSize);
+      console.log(`Uploaded PDF: ${attachment.id} (${attachment.size} bytes)`);
+
+      // Step 2: Download the PDF from Airtable CDN and validate
+      const downloadUrl = attachment.url;
+      expect(downloadUrl).toBeDefined();
+      console.log(`Downloading from Airtable CDN: ${downloadUrl.substring(0, 50)}...`);
+
+      const downloadedBuffer = await new Promise<Buffer>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("Download timeout")), 30000);
+
+        https.get(downloadUrl, (res) => {
+          if (res.statusCode !== 200) {
+            clearTimeout(timeout);
+            reject(new Error(`Download HTTP ${res.statusCode}`));
+            return;
+          }
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk: Buffer) => chunks.push(chunk));
+          res.on("end", () => {
+            clearTimeout(timeout);
+            resolve(Buffer.concat(chunks));
+          });
+          res.on("error", (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        }).on("error", (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+      });
+
+      const downloadedSize = downloadedBuffer.length;
+      console.log(`Downloaded PDF: ${downloadedSize} bytes`);
+
+      // Step 3: Validate downloaded PDF
+      // Check magic bytes
+      const downloadedMagicBytes = downloadedBuffer.subarray(0, 5).toString("ascii");
+      expect(downloadedMagicBytes).toBe("%PDF-");
+      console.log(`Downloaded PDF magic bytes verified: ${downloadedMagicBytes}`);
+
+      // Check size matches
+      expect(downloadedSize).toBe(originalSize);
+      console.log(`PDF validation passed: size=${downloadedSize}, magic=${downloadedMagicBytes}`);
+    }, 60000); // 60 second timeout for network operations
   });
 
   describe("Comment Operations", () => {

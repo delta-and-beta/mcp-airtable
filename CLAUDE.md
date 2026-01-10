@@ -269,12 +269,12 @@ npm run dev
 - `batch.test.ts` - Batch operations (9 tests)
 - `fields.test.ts` - Field management (18 tests)
 
-### End-to-End Tests (24 tests)
+### End-to-End Tests (25 tests)
 
 E2E tests run against the live Airtable API. They automatically:
 1. List existing bases to find next available "Testing N" name
 2. Create a new "Testing N" base for the test run
-3. Run all 24 tests against that base (including 200 record batch test)
+3. Run all 25 tests against that base (including 200 record batch test and PDF upload/download validation)
 4. Clean up records (base must be deleted manually)
 
 **Batch Testing:**
