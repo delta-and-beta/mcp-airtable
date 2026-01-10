@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Throws `TimeoutError` with details (timeout duration, URL)
   - Timeout errors are retryable (like network errors)
   - 8 new unit tests for timeout functionality
+- **Connection Keep-Alive**: HTTP connection pooling with undici Agent
+  - Persistent connections reduce latency on repeated API calls
+  - Configurable max connections (default: 10), keep-alive timeouts
+  - HTTP agent stats integrated into health check system
+  - `pooledFetch` utility for automatic connection reuse
 - **Modular Architecture**: Refactored Airtable client into modular components (`src/lib/airtable/`)
   - `client.ts` - Main AirtableClient class
   - `fetch.ts` - Fetch utility with detailed error handling
