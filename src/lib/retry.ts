@@ -81,21 +81,23 @@ export function isRetryableError(errorCode: string | undefined, retryableCodes: 
  * Supports both seconds (integer) and HTTP-date formats
  */
 export function parseRetryAfter(retryAfterHeader: string | null): number | null {
-  if (!retryAfterHeader || retryAfterHeader.trim() === "") return null;
+  if (!retryAfterHeader) return null;
+
+  const trimmed = retryAfterHeader.trim();
+  if (trimmed === "") return null;
 
   // Try parsing as seconds (integer)
-  // Only accept if the entire string is a valid non-negative integer
-  if (/^\d+$/.test(retryAfterHeader.trim())) {
-    const seconds = parseInt(retryAfterHeader, 10);
-    return seconds * 1000;
+  if (/^\d+$/.test(trimmed)) {
+    return parseInt(trimmed, 10) * 1000;
   }
 
   // Try parsing as HTTP-date (RFC 7231 format)
   // HTTP-date is typically like "Wed, 21 Oct 2015 07:28:00 GMT"
-  const date = new Date(retryAfterHeader);
-  if (!isNaN(date.getTime()) && retryAfterHeader.includes(" ")) {
-    const delayMs = date.getTime() - Date.now();
-    return Math.max(0, delayMs);
+  if (trimmed.includes(" ")) {
+    const date = new Date(trimmed);
+    if (!isNaN(date.getTime())) {
+      return Math.max(0, date.getTime() - Date.now());
+    }
   }
 
   return null;

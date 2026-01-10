@@ -56,20 +56,21 @@ export function generateRequestKey(
 }
 
 /**
+ * Check if a pending request is still valid (not expired)
+ */
+function isValidPendingRequest(pending: PendingRequest<unknown>): boolean {
+  return Date.now() - pending.createdAt <= DEFAULT_OPTIONS.ttlMs;
+}
+
+/**
  * Check if a request with this key is already pending
  */
 export function isPending(key: string): boolean {
   const pending = pendingRequests.get(key);
-  if (!pending) {
+  if (!pending || !isValidPendingRequest(pending)) {
+    if (pending) pendingRequests.delete(key);
     return false;
   }
-
-  // Check if request has expired
-  if (Date.now() - pending.createdAt > DEFAULT_OPTIONS.ttlMs) {
-    pendingRequests.delete(key);
-    return false;
-  }
-
   return true;
 }
 
@@ -78,13 +79,8 @@ export function isPending(key: string): boolean {
  */
 export function getPendingRequest<T>(key: string): Promise<T> | null {
   const pending = pendingRequests.get(key) as PendingRequest<T> | undefined;
-  if (!pending) {
-    return null;
-  }
-
-  // Check if request has expired
-  if (Date.now() - pending.createdAt > DEFAULT_OPTIONS.ttlMs) {
-    pendingRequests.delete(key);
+  if (!pending || !isValidPendingRequest(pending)) {
+    if (pending) pendingRequests.delete(key);
     return null;
   }
 
@@ -204,11 +200,10 @@ export function resetDeduplicationStats(): void {
  * Clean up expired pending requests
  */
 export function cleanupExpiredRequests(): number {
-  const now = Date.now();
   let cleaned = 0;
 
   for (const [key, pending] of pendingRequests.entries()) {
-    if (now - pending.createdAt > DEFAULT_OPTIONS.ttlMs) {
+    if (!isValidPendingRequest(pending)) {
       pendingRequests.delete(key);
       cleaned++;
     }

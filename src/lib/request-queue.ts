@@ -102,9 +102,9 @@ export class RequestQueue {
    */
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const request: QueuedRequest<T> = {
+      const request: QueuedRequest<unknown> = {
         fn,
-        resolve,
+        resolve: resolve as (value: unknown) => void,
         reject,
         queuedAt: Date.now(),
       };
@@ -112,12 +112,11 @@ export class RequestQueue {
       // Set timeout for queued request
       if (this.options.queueTimeoutMs > 0) {
         request.timeoutId = setTimeout(() => {
-          this.handleTimeout(request as unknown as QueuedRequest<unknown>);
+          this.handleTimeout(request);
         }, this.options.queueTimeoutMs);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.queue.push(request as any);
+      this.queue.push(request);
 
       logger.debug("Request queued", {
         queueSize: this.queue.length,
@@ -181,19 +180,23 @@ export class RequestQueue {
 
     // Execute the request
     this.running++;
-    request
-      .fn()
-      .then((result) => {
-        this.completedCount++;
-        request.resolve(result);
-      })
-      .catch((error) => {
-        request.reject(error);
-      })
-      .finally(() => {
-        this.running--;
-        this.processQueue();
-      });
+    this.executeRequest(request);
+  }
+
+  /**
+   * Execute a queued request and handle its result
+   */
+  private async executeRequest(request: QueuedRequest<unknown>): Promise<void> {
+    try {
+      const result = await request.fn();
+      this.completedCount++;
+      request.resolve(result);
+    } catch (error) {
+      request.reject(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      this.running--;
+      this.processQueue();
+    }
   }
 
   /**

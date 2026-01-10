@@ -109,11 +109,11 @@ export class CircuitBreaker {
     this.checkStateTransition();
 
     if (this.state === CircuitState.OPEN) {
-      const timeSinceOpen = Date.now() - this.lastStateChange;
       const nextRetryTime = this.lastStateChange + this.options.resetTimeoutMs;
+      const retryInSeconds = Math.ceil((nextRetryTime - Date.now()) / 1000);
 
       throw new CircuitBreakerError(
-        `Circuit breaker '${this.options.name}' is open. Retry after ${Math.ceil((nextRetryTime - Date.now()) / 1000)}s`,
+        `Circuit breaker '${this.options.name}' is open. Retry after ${retryInSeconds}s`,
         this.options.name,
         nextRetryTime
       );
@@ -131,18 +131,22 @@ export class CircuitBreaker {
     this.successes++;
     this.lastSuccessTime = Date.now();
 
-    if (this.state === CircuitState.HALF_OPEN) {
-      if (this.successes >= this.options.successThreshold) {
-        this.transitionTo(CircuitState.CLOSED);
-        logger.info("Circuit breaker closed", {
-          name: this.options.name,
-          reason: "success_threshold_reached",
-          successThreshold: this.options.successThreshold,
-        });
-      }
-    } else if (this.state === CircuitState.CLOSED) {
-      // Reset failure count on success in closed state
-      this.failures = 0;
+    switch (this.state) {
+      case CircuitState.HALF_OPEN:
+        if (this.successes >= this.options.successThreshold) {
+          this.transitionTo(CircuitState.CLOSED);
+          logger.info("Circuit breaker closed", {
+            name: this.options.name,
+            reason: "success_threshold_reached",
+            successThreshold: this.options.successThreshold,
+          });
+        }
+        break;
+
+      case CircuitState.CLOSED:
+        // Reset failure count on success in closed state
+        this.failures = 0;
+        break;
     }
   }
 
@@ -159,26 +163,30 @@ export class CircuitBreaker {
     this.failureTimestamps.push(Date.now());
     this.pruneOldFailures();
 
-    if (this.state === CircuitState.HALF_OPEN) {
-      // Any failure in half-open reopens the circuit
-      this.transitionTo(CircuitState.OPEN);
-      logger.warn("Circuit breaker reopened", {
-        name: this.options.name,
-        reason: "failure_in_half_open",
-        error: error?.message,
-      });
-    } else if (this.state === CircuitState.CLOSED) {
-      // Check if we've exceeded failure threshold within window
-      if (this.getRecentFailureCount() >= this.options.failureThreshold) {
+    switch (this.state) {
+      case CircuitState.HALF_OPEN:
+        // Any failure in half-open reopens the circuit
         this.transitionTo(CircuitState.OPEN);
-        logger.warn("Circuit breaker opened", {
+        logger.warn("Circuit breaker reopened", {
           name: this.options.name,
-          reason: "failure_threshold_exceeded",
-          failures: this.failures,
-          threshold: this.options.failureThreshold,
+          reason: "failure_in_half_open",
           error: error?.message,
         });
-      }
+        break;
+
+      case CircuitState.CLOSED:
+        // Check if we've exceeded failure threshold within window
+        if (this.getRecentFailureCount() >= this.options.failureThreshold) {
+          this.transitionTo(CircuitState.OPEN);
+          logger.warn("Circuit breaker opened", {
+            name: this.options.name,
+            reason: "failure_threshold_exceeded",
+            failures: this.failures,
+            threshold: this.options.failureThreshold,
+            error: error?.message,
+          });
+        }
+        break;
     }
   }
 

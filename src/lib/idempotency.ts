@@ -156,38 +156,24 @@ export function removeIdempotencyKey(key: string): void {
   idempotencyStore.delete(key);
 }
 
-/**
- * Get current stats about idempotency tracking
- */
-export function getIdempotencyStats(): {
+export interface IdempotencyStats {
   totalKeys: number;
   pendingCount: number;
   completedCount: number;
   failedCount: number;
-} {
-  let pending = 0;
-  let completed = 0;
-  let failed = 0;
+}
 
-  for (const entry of idempotencyStore.values()) {
-    switch (entry.status) {
-      case "pending":
-        pending++;
-        break;
-      case "completed":
-        completed++;
-        break;
-      case "failed":
-        failed++;
-        break;
-    }
-  }
+/**
+ * Get current stats about idempotency tracking
+ */
+export function getIdempotencyStats(): IdempotencyStats {
+  const entries = Array.from(idempotencyStore.values());
 
   return {
     totalKeys: idempotencyStore.size,
-    pendingCount: pending,
-    completedCount: completed,
-    failedCount: failed,
+    pendingCount: entries.filter((e) => e.status === "pending").length,
+    completedCount: entries.filter((e) => e.status === "completed").length,
+    failedCount: entries.filter((e) => e.status === "failed").length,
   };
 }
 
@@ -274,26 +260,25 @@ export async function withIdempotency<T>(
 ): Promise<T> {
   const { isNew, existingEntry } = startIdempotentOperation(key, operation);
 
-  // If operation already exists and completed, return cached result
+  // Handle existing operation based on status
   if (!isNew && existingEntry) {
-    if (existingEntry.status === "completed") {
-      logger.info("Returning cached result for idempotent operation", { key, operation });
-      return existingEntry.result as T;
-    }
+    switch (existingEntry.status) {
+      case "completed":
+        logger.info("Returning cached result for idempotent operation", { key, operation });
+        return existingEntry.result as T;
 
-    if (existingEntry.status === "pending") {
-      // Another request is in progress - this is a race condition
-      // In a distributed system, we'd need distributed locks
-      // For now, we'll let both proceed but log a warning
-      logger.warn("Concurrent idempotent operation detected", { key, operation });
-    }
+      case "pending":
+        // Race condition - log warning but proceed
+        // In a distributed system, we'd need distributed locks
+        logger.warn("Concurrent idempotent operation detected", { key, operation });
+        break;
 
-    // If failed, allow retry
-    if (existingEntry.status === "failed") {
-      logger.info("Retrying previously failed idempotent operation", { key, operation });
-      // Remove the failed entry to allow fresh tracking
-      removeIdempotencyKey(key);
-      startIdempotentOperation(key, operation);
+      case "failed":
+        // Allow retry by resetting tracking
+        logger.info("Retrying previously failed idempotent operation", { key, operation });
+        removeIdempotencyKey(key);
+        startIdempotentOperation(key, operation);
+        break;
     }
   }
 

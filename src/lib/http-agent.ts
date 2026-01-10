@@ -66,6 +66,13 @@ export function getHttpAgent(options?: HttpAgentOptions): Agent {
 }
 
 /**
+ * Safely get a numeric stat value with fallback to 0
+ */
+function getStatValue(value: unknown): number {
+  return typeof value === "number" ? value : 0;
+}
+
+/**
  * Get stats from the HTTP agent
  */
 export function getHttpAgentStats(): HttpAgentStats | null {
@@ -75,11 +82,11 @@ export function getHttpAgentStats(): HttpAgentStats | null {
 
   const stats = globalAgent.stats;
   return {
-    pendingRequests: typeof stats.pending === 'number' ? stats.pending : 0,
-    runningRequests: typeof stats.running === 'number' ? stats.running : 0,
-    totalConnections: typeof stats.connected === 'number' ? stats.connected : 0,
-    freeConnections: typeof stats.free === 'number' ? stats.free : 0,
-    busyConnections: typeof stats.size === 'number' ? stats.size : 0,
+    pendingRequests: getStatValue(stats.pending),
+    runningRequests: getStatValue(stats.running),
+    totalConnections: getStatValue(stats.connected),
+    freeConnections: getStatValue(stats.free),
+    busyConnections: getStatValue(stats.size),
   };
 }
 

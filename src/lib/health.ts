@@ -57,6 +57,13 @@ export interface ReadinessResult {
 // Server start time for uptime calculation
 const startTime = Date.now();
 
+/**
+ * Calculate heap usage percentage
+ */
+function getHeapUsedPercent(memUsage: NodeJS.MemoryUsage): number {
+  return (memUsage.heapUsed / memUsage.heapTotal) * 100;
+}
+
 // Active session count (updated by server)
 let activeSessions = 0;
 
@@ -118,7 +125,7 @@ export function checkReadiness(): ReadinessResult {
 
   // Check memory pressure
   const memUsage = process.memoryUsage();
-  const heapUsedPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+  const heapUsedPercent = getHeapUsedPercent(memUsage);
 
   if (heapUsedPercent > 90) {
     return {
@@ -239,7 +246,7 @@ function evaluateCircuitBreakerHealth(stats: Map<string, CircuitBreakerStats>): 
  * Evaluate memory health
  */
 function evaluateMemoryHealth(memUsage: NodeJS.MemoryUsage): ComponentHealth {
-  const heapUsedPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+  const heapUsedPercent = getHeapUsedPercent(memUsage);
   const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
   const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
 
@@ -305,16 +312,22 @@ function evaluateHttpAgentHealth(stats: HttpAgentStats | null): ComponentHealth 
 }
 
 /**
+ * Health status priority (higher = worse)
+ */
+const STATUS_PRIORITY: Record<HealthStatus, number> = {
+  [HealthStatus.HEALTHY]: 0,
+  [HealthStatus.DEGRADED]: 1,
+  [HealthStatus.UNHEALTHY]: 2,
+};
+
+/**
  * Get the worst status from a list
  */
 function getWorstStatus(statuses: HealthStatus[]): HealthStatus {
-  if (statuses.includes(HealthStatus.UNHEALTHY)) {
-    return HealthStatus.UNHEALTHY;
-  }
-  if (statuses.includes(HealthStatus.DEGRADED)) {
-    return HealthStatus.DEGRADED;
-  }
-  return HealthStatus.HEALTHY;
+  return statuses.reduce((worst, status) =>
+    STATUS_PRIORITY[status] > STATUS_PRIORITY[worst] ? status : worst,
+    HealthStatus.HEALTHY
+  );
 }
 
 /**
