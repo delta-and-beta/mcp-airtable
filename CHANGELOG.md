@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Circuit Breaker Pattern**: Prevents cascading failures with automatic recovery
+  - Three states: CLOSED (normal), OPEN (failing fast), HALF_OPEN (testing recovery)
+  - Configurable failure threshold, reset timeout, success threshold
+  - Windowed failure counting to ignore old failures
+  - Global circuit breaker registry for shared breakers
+  - `CircuitBreakerError` with retry timing information
+  - 24 new unit tests for circuit breaker functionality
 - **Request Timeout**: Configurable timeout for HTTP requests using AbortController
   - Default timeout of 30000ms per request attempt
   - `timeoutMs` option in `FetchOptions` and `RetryOptions`

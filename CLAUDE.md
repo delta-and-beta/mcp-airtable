@@ -206,6 +206,46 @@ Error types:
 - `AirtableError` - Airtable API errors (includes status code)
 - `RateLimitError` - Rate limit exceeded (includes retryAfter)
 - `TimeoutError` - Request timed out (includes timeoutMs, url)
+- `CircuitBreakerError` - Circuit breaker is open (includes circuitName, nextRetryTime)
+
+## Circuit Breaker Pattern
+
+Prevents cascading failures by failing fast when a service is unhealthy:
+
+**States:**
+- `CLOSED` - Normal operation, requests pass through
+- `OPEN` - Service failing, requests rejected immediately
+- `HALF_OPEN` - Testing recovery, limited requests allowed
+
+**Default Configuration:**
+- Failure threshold: 5 failures to open circuit
+- Reset timeout: 30000ms before testing recovery
+- Success threshold: 2 successes in half-open to close
+- Failure window: 60000ms (only count recent failures)
+
+**Usage:**
+```typescript
+import { getCircuitBreaker } from "./lib/circuit-breaker.js";
+
+const breaker = getCircuitBreaker("airtable-api", {
+  failureThreshold: 5,
+  resetTimeoutMs: 30000,
+});
+
+// Execute with protection
+const result = await breaker.execute(() => fetchWithDetails(url, options));
+
+// Or check manually
+if (breaker.canRequest()) {
+  try {
+    const result = await fetchWithDetails(url, options);
+    breaker.recordSuccess();
+  } catch (error) {
+    breaker.recordFailure(error);
+    throw error;
+  }
+}
+```
 
 ## Retry with Exponential Backoff
 
