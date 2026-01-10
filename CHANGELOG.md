@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic cleanup of expired pending requests
   - Stats tracking for monitoring deduplication effectiveness
   - 21 new unit tests for deduplication module
+- **Request Queue**: Concurrency control for API requests
+  - Limits concurrent requests (default: 5) to prevent API overload
+  - Queue excess requests with configurable timeout
+  - `QueueFullError` and `QueueTimeoutError` for error handling
+  - Global queue with `withQueue()` helper function
+  - Stats tracking for monitoring queue health
+  - 20 new unit tests for request queue
 - **Modular Architecture**: Refactored Airtable client into modular components (`src/lib/airtable/`)
   - `client.ts` - Main AirtableClient class
   - `fetch.ts` - Fetch utility with detailed error handling
