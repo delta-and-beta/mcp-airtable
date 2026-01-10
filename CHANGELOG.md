@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Request Timeout**: Configurable timeout for HTTP requests using AbortController
+  - Default timeout of 30000ms per request attempt
+  - `timeoutMs` option in `FetchOptions` and `RetryOptions`
+  - Each retry attempt gets its own fresh timeout
+  - Throws `TimeoutError` with details (timeout duration, URL)
+  - Timeout errors are retryable (like network errors)
+  - 8 new unit tests for timeout functionality
 - **Modular Architecture**: Refactored Airtable client into modular components (`src/lib/airtable/`)
   - `client.ts` - Main AirtableClient class
   - `fetch.ts` - Fetch utility with detailed error handling

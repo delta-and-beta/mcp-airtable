@@ -10,7 +10,9 @@ import {
   parseRetryAfter,
   withRetry,
   fetchWithRetry,
+  isTimeoutError,
 } from "../../lib/retry.js";
+import { TimeoutError } from "../../lib/errors.js";
 
 describe("retry utility", () => {
   describe("calculateBackoff", () => {
@@ -334,6 +336,200 @@ describe("retry utility", () => {
 
       expect(result.status).toBe(200);
       expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should throw TimeoutError when request times out", async () => {
+      // Simulate a slow fetch that respects abort signal
+      mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
+        return new Promise((resolve, reject) => {
+          const checkAbort = () => {
+            if (opts?.signal?.aborted) {
+              const abortError = new Error("The operation was aborted");
+              abortError.name = "AbortError";
+              reject(abortError);
+              return true;
+            }
+            return false;
+          };
+
+          if (!checkAbort()) {
+            // Check periodically for abort
+            const intervalId = setInterval(() => {
+              if (checkAbort()) {
+                clearInterval(intervalId);
+              }
+            }, 10);
+          }
+        });
+      });
+
+      let caughtError: Error | null = null;
+      const promise = fetchWithRetry("https://example.com", {}, {
+        timeoutMs: 100,
+        maxRetries: 0, // No retries to test single timeout
+      }).catch(e => { caughtError = e; });
+
+      await vi.advanceTimersByTimeAsync(150);
+      await promise;
+
+      expect(caughtError).not.toBeNull();
+      expect(caughtError).toBeInstanceOf(TimeoutError);
+      expect(caughtError!.message).toContain("Request timed out");
+      const timeoutErr = caughtError as unknown as TimeoutError;
+      expect(timeoutErr.timeoutMs).toBe(100);
+      expect(timeoutErr.url).toBe("https://example.com");
+    });
+
+    it("should retry on timeout error", async () => {
+      // First request times out, second succeeds
+      const successResponse = new Response("OK", { status: 200 });
+      let callCount = 0;
+
+      mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
+        callCount++;
+        if (callCount === 1) {
+          // First call - simulate timeout (abort-aware)
+          return new Promise((resolve, reject) => {
+            const checkAbort = () => {
+              if (opts?.signal?.aborted) {
+                const abortError = new Error("The operation was aborted");
+                abortError.name = "AbortError";
+                reject(abortError);
+                return true;
+              }
+              return false;
+            };
+
+            if (!checkAbort()) {
+              const intervalId = setInterval(() => {
+                if (checkAbort()) {
+                  clearInterval(intervalId);
+                }
+              }, 10);
+            }
+          });
+        }
+        // Second call - success
+        return Promise.resolve(successResponse);
+      });
+
+      const promise = fetchWithRetry("https://example.com", {}, {
+        timeoutMs: 100,
+        maxRetries: 2,
+        initialDelayMs: 50,
+        jitterFactor: 0,
+      });
+
+      // Advance past first timeout (100ms) + backoff delay (50ms) + some buffer
+      await vi.advanceTimersByTimeAsync(300);
+      const result = await promise;
+
+      expect(result.status).toBe(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should exhaust retries on repeated timeouts", async () => {
+      // All requests time out
+      mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
+        return new Promise((resolve, reject) => {
+          const checkAbort = () => {
+            if (opts?.signal?.aborted) {
+              const abortError = new Error("The operation was aborted");
+              abortError.name = "AbortError";
+              reject(abortError);
+              return true;
+            }
+            return false;
+          };
+
+          if (!checkAbort()) {
+            const intervalId = setInterval(() => {
+              if (checkAbort()) {
+                clearInterval(intervalId);
+              }
+            }, 10);
+          }
+        });
+      });
+
+      let caughtError: Error | null = null;
+      const promise = fetchWithRetry("https://example.com", {}, {
+        timeoutMs: 100,
+        maxRetries: 2,
+        initialDelayMs: 50,
+        jitterFactor: 0,
+      }).catch(e => { caughtError = e; });
+
+      // Need to advance through 3 timeouts (initial + 2 retries) with delays
+      await vi.advanceTimersByTimeAsync(1000);
+      await promise;
+
+      expect(caughtError).not.toBeNull();
+      expect(caughtError).toBeInstanceOf(TimeoutError);
+      expect(mockFetch).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
+    });
+
+    it("should use custom timeout value", async () => {
+      mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
+        return new Promise((resolve, reject) => {
+          const checkAbort = () => {
+            if (opts?.signal?.aborted) {
+              const abortError = new Error("The operation was aborted");
+              abortError.name = "AbortError";
+              reject(abortError);
+              return true;
+            }
+            return false;
+          };
+
+          if (!checkAbort()) {
+            const intervalId = setInterval(() => {
+              if (checkAbort()) {
+                clearInterval(intervalId);
+              }
+            }, 10);
+          }
+        });
+      });
+
+      let caughtError: Error | null = null;
+      const promise = fetchWithRetry("https://example.com", {}, {
+        timeoutMs: 5000, // 5 second custom timeout
+        maxRetries: 0,
+      }).catch(e => { caughtError = e; });
+
+      // Should not timeout at 4 seconds
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(caughtError).toBeNull();
+
+      // Should timeout at 5 seconds
+      await vi.advanceTimersByTimeAsync(1500);
+      await promise;
+
+      expect(caughtError).not.toBeNull();
+      expect(caughtError).toBeInstanceOf(TimeoutError);
+    });
+  });
+
+  describe("isTimeoutError", () => {
+    it("should return true for TimeoutError", () => {
+      const error = new TimeoutError("Request timed out", 5000, "https://example.com");
+      expect(isTimeoutError(error)).toBe(true);
+    });
+
+    it("should return false for regular Error", () => {
+      const error = new Error("Some error");
+      expect(isTimeoutError(error)).toBe(false);
+    });
+
+    it("should return false for null/undefined", () => {
+      expect(isTimeoutError(null)).toBe(false);
+      expect(isTimeoutError(undefined)).toBe(false);
+    });
+
+    it("should return false for non-Error objects", () => {
+      expect(isTimeoutError({ message: "fake error" })).toBe(false);
+      expect(isTimeoutError("error string")).toBe(false);
     });
   });
 });

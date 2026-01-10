@@ -73,6 +73,19 @@ export class RateLimitError extends Error {
   }
 }
 
+export class TimeoutError extends Error {
+  public code: number = MCP_ERROR_CODES.INTERNAL_ERROR;
+
+  constructor(
+    message: string = "Request timed out",
+    public timeoutMs?: number,
+    public url?: string
+  ) {
+    super(message);
+    this.name = "TimeoutError";
+  }
+}
+
 // MCP-compliant error response format
 export interface McpErrorResponse {
   error: {
