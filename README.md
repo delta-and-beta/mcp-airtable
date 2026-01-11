@@ -1,70 +1,87 @@
-# MCP Airtable - Clean FastMCP Implementation
+<div align="center">
 
-**Minimal, production-ready TypeScript MCP server** for Airtable integration using Node.js FastMCP framework.
+# MCP Airtable
 
-## Features
+**Production-ready MCP server for Airtable integration**
 
-### Core Functionality
-- ✅ **21 Tools** - Complete CRUD, batch operations, schema management, comments
-- ✅ **Streamable-HTTP Transport** - Claude Desktop 2025+ native support
-- ✅ **Header-based Authentication** - API keys and workspace ID from client headers
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-297%20passing-brightgreen?style=flat-square)](./src/__tests__)
 
-### Production Ready
-- ✅ **Custom Error Classes** - Proper error handling with status codes
-- ✅ **Structured Logging** - JSON logs in production, pretty logs in dev
-- ✅ **Response Caching** - 5-10min TTL for metadata (list_bases, get_schema)
-- ✅ **Rate Limiting** - 60 req/min default, configurable
-- ✅ **Environment Validation** - Zod-validated configuration
-- ✅ **Sentry Integration** - Optional error tracking and request monitoring
+Built with [FastMCP](https://github.com/punkpeye/fastmcp) • Works with Claude Desktop & Claude.ai
 
-### Stability & Resilience
-- ✅ **Retry with Exponential Backoff** - Auto-retry on 429/5xx errors with jitter
-- ✅ **Circuit Breaker** - Prevents cascading failures (CLOSED/OPEN/HALF_OPEN states)
-- ✅ **Request Timeout** - Configurable timeout (30s default) with AbortController
-- ✅ **Connection Keep-Alive** - HTTP connection pooling via undici Agent
-- ✅ **Request Deduplication** - Shares results for identical concurrent requests
-- ✅ **Request Queue** - Concurrency control (5 concurrent requests default)
-- ✅ **Idempotency Keys** - Safe retries for write operations
-- ✅ **Health Checks** - Kubernetes-ready liveness/readiness probes
+---
 
-### Security Hardening
-- ✅ **Formula Injection Prevention** - Blocks EVAL, EXEC, SQL patterns
-- ✅ **Path Traversal Blocking** - Validates all file paths
-- ✅ **Input Validation** - Zod schemas for all tool parameters
-- ✅ **Base64 Validation** - Size limits and format checking
+</div>
 
-### Clean Architecture
-- ✅ **8 Core Files** - ~900 lines total (vs 5000+ in traditional implementations)
-- ✅ **Zero Bloat** - Only essential dependencies (FastMCP, Zod, Airtable, dotenv)
-- ✅ **Type Safe** - TypeScript strict mode
-- ✅ **Well Organized** - tools/ lib/ clear separation
+## Overview
 
-## Quick Start
+A minimal, enterprise-grade MCP server that enables AI assistants to interact with Airtable. Features 21 tools covering complete CRUD operations, batch processing, schema management, and file attachments.
 
-### Installation
+<br>
+
+## ✨ Highlights
+
+<table>
+<tr>
+<td width="50%">
+
+### Core
+- **21 Tools** — Full CRUD, batch ops, attachments
+- **Streamable HTTP** — Claude Desktop 2025+ native
+- **Header Auth** — Multi-tenant ready
+
+</td>
+<td width="50%">
+
+### Reliability
+- **Circuit Breaker** — Cascading failure prevention
+- **Auto-Retry** — Exponential backoff with jitter
+- **Health Checks** — K8s liveness/readiness probes
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### Security
+- **Input Validation** — Zod schemas everywhere
+- **Injection Prevention** — Formula & path attacks blocked
+- **Audit Ready** — See [SECURITY.md](./SECURITY.md)
+
+</td>
+<td width="50%">
+
+### Performance
+- **Connection Pooling** — Keep-alive via undici
+- **Request Deduplication** — Shares concurrent results
+- **Response Caching** — 5-10min TTL for metadata
+
+</td>
+</tr>
+</table>
+
+<br>
+
+## 🚀 Quick Start
 
 ```bash
-npm install
-npm run build
-```
+# Install & build
+npm install && npm run build
 
-### Run Server
-
-```bash
-# Development with auto-reload
-npm run dev
-
-# Production
+# Run server (starts on http://localhost:3000/mcp)
 npm start
 ```
 
-Server starts on **http://localhost:3000/mcp** with streamable-HTTP transport.
+<br>
 
-### Claude Desktop Configuration
+## ⚙️ Configuration
 
-See [`examples/`](./examples/) for complete configuration examples.
+### Claude Desktop
 
-#### Option 1: Local Development (stdio)
+<details>
+<summary><strong>Option 1: Local Development (stdio)</strong></summary>
 
 ```json
 {
@@ -80,7 +97,10 @@ See [`examples/`](./examples/) for complete configuration examples.
 }
 ```
 
-#### Option 2: Remote HTTP (Claude Desktop with mcp-remote)
+</details>
+
+<details>
+<summary><strong>Option 2: Remote HTTP (via mcp-remote)</strong></summary>
 
 ```json
 {
@@ -88,219 +108,153 @@ See [`examples/`](./examples/) for complete configuration examples.
     "mcp-airtable": {
       "command": "npx",
       "args": [
-        "-y",
-        "mcp-remote",
+        "-y", "mcp-remote",
         "https://your-server.com/mcp",
-        "--header",
-        "x-airtable-api-key:patXXXXX.XXXXX...",
-        "--header",
-        "x-airtable-workspace-id:wspXXXXXXXXXXXXXXX"
+        "--header", "x-airtable-api-key:patXXXXX.XXXXX...",
+        "--header", "x-airtable-workspace-id:wspXXXXXXXXXXX"
       ]
     }
   }
 }
 ```
 
-**Headers:**
-- `x-airtable-api-key` - Your Airtable Personal Access Token (required)
-- `x-airtable-workspace-id` - Default workspace for create_base (optional)
+</details>
 
-#### Option 3: Remote Server (Claude.ai Web)
+<details>
+<summary><strong>Option 3: Claude.ai Web</strong></summary>
 
-Deploy to any hosting provider, then connect via Claude.ai:
-
-1. Deploy: `npm start` (runs on port 3000)
+1. Deploy server: `npm start`
 2. Open [claude.ai](https://claude.ai) → Settings → Connectors
-3. Add custom connector: `https://your-server.com/mcp`
-4. Add header: `x-airtable-api-key: patXXXXX.XXXXX...`
+3. Add connector URL: `https://your-server.com/mcp`
+4. Add header: `x-airtable-api-key: patXXXXX...`
 
-**Config location:**
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+</details>
 
-**Get your API key:** https://airtable.com/create/tokens
+<br>
 
-## Available Tools (21 Total)
+**Config locations:**
+| Platform | Path |
+|----------|------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 
-### Base & Workspace Management (4)
-- **list_workspaces** - List workspaces (Enterprise plan required, provides UI workaround)
-- **list_bases** - List all accessible Airtable bases
-- **get_base_schema** - Get complete base schema (tables, fields, views)
-- **create_base** - Create new base in a workspace
+→ [Get your API key](https://airtable.com/create/tokens)
 
-### Table Management (3)
-- **list_tables** - List tables in a base with field definitions
-- **create_table** - Create new table with fields
-- **update_table** - Update table name/description
+<br>
 
-### Field Management (3)
-- **create_field** - Add field to existing table
-- **update_field** - Update field name/description
-- **upload_attachment** - Upload file to attachment field
+## 🛠 Available Tools
 
-### Record Operations (5)
-- **get_records** - Query records with filtering and sorting
-- **get_record** - Get single record by ID
-- **create_records** - Create new records
-- **update_record** - Update existing records
-- **delete_record** - Delete records permanently
+<table>
+<tr>
+<th>Category</th>
+<th>Tools</th>
+</tr>
+<tr>
+<td><strong>Bases & Workspaces</strong></td>
+<td><code>list_workspaces</code> · <code>list_bases</code> · <code>get_base_schema</code> · <code>create_base</code></td>
+</tr>
+<tr>
+<td><strong>Tables</strong></td>
+<td><code>list_tables</code> · <code>create_table</code> · <code>update_table</code></td>
+</tr>
+<tr>
+<td><strong>Fields</strong></td>
+<td><code>create_field</code> · <code>update_field</code> · <code>upload_attachment</code></td>
+</tr>
+<tr>
+<td><strong>Records</strong></td>
+<td><code>get_records</code> · <code>get_record</code> · <code>create_records</code> · <code>update_record</code> · <code>delete_record</code></td>
+</tr>
+<tr>
+<td><strong>Batch Operations</strong></td>
+<td><code>upsert_records</code> · <code>delete_records</code></td>
+</tr>
+<tr>
+<td><strong>Comments</strong></td>
+<td><code>list_comments</code> · <code>create_comment</code> · <code>update_comment</code> · <code>delete_comment</code></td>
+</tr>
+<tr>
+<td><strong>Health</strong></td>
+<td><code>health_check</code> · <code>liveness</code> · <code>readiness</code></td>
+</tr>
+</table>
 
-### Batch Operations (2)
-- **upsert_records** - Create or update up to 1000 records
-- **delete_records** - Delete up to 1000 records
+<br>
 
-### Comments (4)
-- **list_comments** - List comments on a record
-- **create_comment** - Add comment to a record
-- **update_comment** - Update existing comment
-- **delete_comment** - Delete comment
-
-## Architecture
+## 💬 Usage Examples
 
 ```
-src/
-├── index.ts              # Entry point
-├── server.ts             # FastMCP initialization
-├── tools/                # 21 tools across 6 files
-│   ├── bases.ts          # list_workspaces, list_bases, get_base_schema, create_base
-│   ├── tables.ts         # list_tables, create_table, update_table
-│   ├── fields.ts         # create_field, update_field, upload_attachment
-│   ├── records.ts        # get_records, get_record, create_records, update_record, delete_record
-│   ├── batch.ts          # upsert_records, delete_records
-│   └── comments.ts       # list_comments, create_comment, update_comment, delete_comment
-└── lib/                  # Utilities
-    ├── airtable/         # Modular Airtable client
-    │   ├── client.ts     # AirtableClient class
-    │   ├── fetch.ts      # fetchWithDetails utility
-    │   ├── types.ts      # Shared TypeScript interfaces
-    │   └── mime-types.ts # MIME type utilities
-    ├── auth.ts           # API key & workspace ID extraction
-    ├── validation.ts     # Security sanitization
-    ├── errors.ts         # Custom error classes
-    ├── logger.ts         # Structured logging
-    ├── cache.ts          # Response caching
-    ├── rate-limiter.ts   # Rate limiting
-    ├── config.ts         # Environment validation
-    ├── sentry.ts         # Error tracking (optional)
-    ├── retry.ts          # Retry with exponential backoff
-    ├── circuit-breaker.ts # Circuit breaker pattern
-    ├── http-agent.ts     # Connection pooling
-    ├── health.ts         # Health check endpoints
-    ├── deduplication.ts  # Request deduplication
-    ├── request-queue.ts  # Concurrency control
-    └── idempotency.ts    # Idempotency keys
+"List all my Airtable bases"
+
+"Get records from Tasks where Status = 'Active'"
+
+"Create a new task with Name='Review PR' and Priority='High'"
+
+"Upload the PDF to the Attachments field on record rec123"
 ```
 
-**Total: ~25 files, ~2500 lines of production code, 272 unit tests + 25 e2e tests**
+<br>
 
-## Usage Examples
+## 🔐 Authentication
 
-### List Bases
-```
-"Using airtable, list my bases"
-```
+The server supports flexible authentication with clear priority:
 
-### Query Records
-```
-"Get records from the Tasks table where Status equals Active"
-```
+| Priority | API Key Source | Workspace ID Source |
+|:--------:|----------------|---------------------|
+| 1 | `x-airtable-api-key` header | `x-airtable-workspace-id` header |
+| 2 | `Authorization: Bearer` header | `workspaceId` parameter |
+| 3 | `airtableApiKey` parameter | `AIRTABLE_WORKSPACE_ID` env |
+| 4 | `AIRTABLE_API_KEY` env | — |
 
-### Create Record
-```
-"Create a new task with Name='Test' and Status='Todo'"
-```
+> **Note:** In production, use headers for multi-tenant support.
 
-### Batch Operations
-```
-"Create 5 test tasks in the Tasks table"
-```
+<br>
 
-## Authentication (FastMCP Best Practice)
+## 🛡 Stability & Resilience
 
-The server uses FastMCP's `authenticate` callback to capture HTTP headers and store them in the session, allowing tools to access headers via `context.session.headers`.
+<details>
+<summary><strong>Retry with Exponential Backoff</strong></summary>
 
-**API key priority (header > parameter > env):**
-1. **HTTP header** - `x-airtable-api-key` via session (recommended for HTTP)
-2. **Bearer token** - `Authorization: Bearer <token>` header
-3. **Tool parameter** - `airtableApiKey` in request (explicit override)
-4. **Environment variable** - `AIRTABLE_API_KEY` (fallback for stdio)
+- Auto-retries on HTTP 429, 500, 502, 503, 504
+- Handles network errors (ECONNRESET, ETIMEDOUT, ECONNREFUSED)
+- Respects `Retry-After` headers
+- Configurable: max retries, delays, jitter
 
-**Workspace ID priority (header > parameter > env):**
-1. **HTTP header** - `x-airtable-workspace-id` via session (set once)
-2. **Tool parameter** - `workspaceId` in request
-3. **Environment variable** - `AIRTABLE_WORKSPACE_ID` (fallback)
+</details>
 
-## Security Features
+<details>
+<summary><strong>Circuit Breaker Pattern</strong></summary>
 
-- ✅ **Formula injection prevention** - Blocks EVAL, EXEC, SQL patterns
-- ✅ **Path traversal blocking** - Validates all file paths
-- ✅ **Input validation** - Zod schemas for all parameters
-- ✅ **Base64 validation** - Size limits and format checking
+Prevents cascading failures with three states:
+- **CLOSED** — Normal operation
+- **OPEN** — Fast-fail mode (API degraded)
+- **HALF_OPEN** — Testing recovery
 
-See [SECURITY.md](./SECURITY.md) for vulnerability reporting and security details.
+</details>
 
-## Stability & Resilience
+<details>
+<summary><strong>Request Management</strong></summary>
 
-The server includes enterprise-grade reliability features:
+- **Timeout**: 30s default per request (AbortController)
+- **Deduplication**: Shares results for identical concurrent GETs
+- **Queue**: Limits to 5 concurrent requests
+- **Keep-Alive**: Connection pooling via undici
 
-### Retry with Exponential Backoff
-Automatically retries failed requests with intelligent backoff:
-- Retries on HTTP 429, 500, 502, 503, 504 errors
-- Retries on network errors (ECONNRESET, ETIMEDOUT, ECONNREFUSED)
-- Respects `Retry-After` header for rate limits
-- Configurable max retries (default: 3), delays, and jitter
+</details>
 
-### Circuit Breaker
-Prevents cascading failures when Airtable API is degraded:
-- **CLOSED** - Normal operation, requests pass through
-- **OPEN** - Failing fast, rejects requests immediately
-- **HALF_OPEN** - Testing recovery with limited requests
-- Configurable failure threshold, reset timeout, success threshold
+<details>
+<summary><strong>Health Checks</strong></summary>
 
-### Request Timeout
-Prevents hanging requests:
-- Default 30 second timeout per request attempt
-- Each retry attempt gets fresh timeout
-- Uses AbortController for clean cancellation
+Kubernetes-ready probes:
+- `health_check` — Detailed status (memory, circuit breakers, uptime)
+- `liveness` — Simple alive check
+- `readiness` — Service ready to accept traffic
 
-### Health Checks (Kubernetes-ready)
-Three endpoints for container orchestration:
-- `health_check` - Detailed status (circuit breakers, memory, uptime)
-- `liveness` - Simple alive check for k8s liveness probe
-- `readiness` - Service readiness for k8s readiness probe
+</details>
 
-### Connection Keep-Alive
-HTTP connection pooling reduces latency:
-- Persistent connections via undici Agent
-- Configurable max connections (default: 10)
-- Connection stats in health check output
+<br>
 
-### Request Deduplication
-Prevents duplicate API calls:
-- Shares results between identical concurrent GET requests
-- Reduces load on Airtable API
-- Automatic cleanup of expired pending requests
-
-### Request Queue
-Concurrency control prevents API overload:
-- Limits concurrent requests (default: 5)
-- Queues excess requests with timeout
-- Prevents overwhelming Airtable rate limits
-
-## Development
-
-```bash
-# Start with auto-reload
-npm run dev
-
-# Type check
-npm run build
-
-# Clean build
-rm -rf dist && npm run build
-```
-
-## Deployment
+## 🐳 Deployment
 
 ### Docker
 
@@ -316,67 +270,94 @@ CMD ["node", "dist/index.js"]
 
 ```bash
 docker build -t mcp-airtable .
-docker run -p 3000:3000 -e AIRTABLE_API_KEY=your_key mcp-airtable
+docker run -p 3000:3000 mcp-airtable
 ```
 
 ### Environment Variables
 
+<details>
+<summary><strong>View all configuration options</strong></summary>
+
 ```bash
 # Server
-PORT=3000                              # Server port (default: 3000)
-NODE_ENV=production                    # Environment mode
+PORT=3000                              # Default: 3000
+NODE_ENV=production
 
-# Authentication (fallbacks - prefer headers in production)
-AIRTABLE_API_KEY=                      # Server-level API key (use x-airtable-api-key header instead)
-AIRTABLE_WORKSPACE_ID=                 # Default workspace (use x-airtable-workspace-id header instead)
+# Authentication (fallbacks — prefer headers)
+AIRTABLE_API_KEY=
+AIRTABLE_WORKSPACE_ID=
 
 # Rate Limiting
-RATE_LIMIT_ENABLED=true                # Enable rate limiting (default: true)
-RATE_LIMIT_REQUESTS_PER_MINUTE=60      # Max requests per minute (default: 60)
+RATE_LIMIT_ENABLED=true                # Default: true
+RATE_LIMIT_REQUESTS_PER_MINUTE=60      # Default: 60
 
-# Caching
-CACHE_ENABLED=true                     # Enable response caching (default: true)
-CACHE_TTL_BASES=300                    # list_bases cache TTL in seconds (default: 300)
-CACHE_TTL_SCHEMA=600                   # get_schema cache TTL in seconds (default: 600)
-CACHE_TTL_TABLES=300                   # list_tables cache TTL in seconds (default: 300)
+# Caching (seconds)
+CACHE_ENABLED=true                     # Default: true
+CACHE_TTL_BASES=300                    # Default: 300
+CACHE_TTL_SCHEMA=600                   # Default: 600
+CACHE_TTL_TABLES=300                   # Default: 300
 
 # Logging
-LOG_LEVEL=info                         # Logging level: debug, info, warn, error (default: info)
+LOG_LEVEL=info                         # debug | info | warn | error
 
-# Sentry Error Tracking (Optional)
-SENTRY_DSN=                            # Sentry DSN (leave empty to disable)
-SENTRY_DEBUG=false                     # Set to true to capture ALL MCP requests
-SENTRY_ENVIRONMENT=production          # Environment name
-SENTRY_TRACES_SAMPLE_RATE=0.1          # Sample rate 0-1 (default: 1.0 in debug, 0.1 in prod)
+# Sentry (Optional)
+SENTRY_DSN=
+SENTRY_DEBUG=false
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.1
 ```
 
-**Note:** In production, API keys and workspace IDs should come from **client headers**, not server environment variables. This enables multi-tenant usage.
+</details>
 
-### Sentry Integration (Optional)
+<br>
 
-Enable error tracking and request monitoring with Sentry:
+## 📁 Architecture
 
-```bash
-# Enable Sentry
-SENTRY_DSN=https://xxx@o0.ingest.sentry.io/0
-
-# Debug mode - captures ALL MCP requests (useful for development)
-SENTRY_DEBUG=true
+```
+src/
+├── index.ts                 # Entry point
+├── server.ts                # FastMCP initialization
+├── tools/                   # 21 tools across 6 files
+│   ├── bases.ts
+│   ├── tables.ts
+│   ├── fields.ts
+│   ├── records.ts
+│   ├── batch.ts
+│   └── comments.ts
+└── lib/                     # Core utilities
+    ├── airtable/            # Modular API client
+    ├── auth.ts              # Authentication
+    ├── validation.ts        # Input sanitization
+    ├── errors.ts            # Error handling
+    ├── retry.ts             # Exponential backoff
+    ├── circuit-breaker.ts   # Failure prevention
+    ├── health.ts            # K8s probes
+    ├── deduplication.ts     # Request dedup
+    ├── request-queue.ts     # Concurrency control
+    └── ...
 ```
 
-**Features:**
-- Automatic error capture with context
-- Optional debug mode for full request tracing
-- Sensitive data redaction (API keys never sent to Sentry)
-- Graceful shutdown with event flushing
+**Stats:** ~2,500 lines of production code · 272 unit tests · 25 e2e tests
 
-## License
+<br>
 
-MIT
+## 📖 References
 
-## References
+| Resource | Link |
+|----------|------|
+| MCP Specification | [modelcontextprotocol.io](https://modelcontextprotocol.io/specification/2025-11-25) |
+| FastMCP Framework | [github.com/punkpeye/fastmcp](https://github.com/punkpeye/fastmcp) |
+| mcp-remote Bridge | [npmjs.com/package/mcp-remote](https://www.npmjs.com/package/mcp-remote) |
+| Airtable API | [airtable.com/developers](https://airtable.com/developers/web/api/introduction) |
 
-- [MCP Specification (Latest)](https://modelcontextprotocol.io/specification/2025-11-25)
-- [FastMCP](https://github.com/punkpeye/fastmcp) - TypeScript framework for MCP servers
-- [mcp-remote](https://www.npmjs.com/package/mcp-remote) - Bridge for Claude Desktop HTTP connections
-- [Airtable API](https://airtable.com/developers/web/api/introduction)
+<br>
+
+---
+
+<div align="center">
+
+**[Security Policy](./SECURITY.md)** · **[Examples](./examples/)** · **[Changelog](./CHANGELOG.md)**
+
+MIT License © Delta & Beta
+
+</div>
