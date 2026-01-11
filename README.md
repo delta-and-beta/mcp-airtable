@@ -161,13 +161,15 @@ Server runs at `http://localhost:3000/mcp`
 
 | Category | Tools |
 |:---------|:------|
-| **Bases & Workspaces** | `list_workspaces` · `list_bases` · `get_base_schema` · `create_base` |
+| **Bases & Workspaces** | `list_workspaces`° · `list_bases` · `get_base_schema` · `create_base` |
 | **Tables** | `list_tables` · `create_table` · `update_table` |
 | **Fields** | `create_field` · `update_field` · `upload_attachment` |
 | **Records** | `get_records` · `get_record` · `create_records` · `update_record` · `delete_record` |
 | **Batch** | `upsert_records` · `delete_records` |
 | **Comments** | `list_comments` · `create_comment` · `update_comment` · `delete_comment` |
 | **Health** | `health_check` · `liveness` · `readiness` |
+
+° *Enterprise Scale plan required*
 
 <br>
 
@@ -193,6 +195,74 @@ Server runs at `http://localhost:3000/mcp`
 | 2 | `Authorization: Bearer` header | `workspaceId` parameter |
 | 3 | `airtableApiKey` parameter | `AIRTABLE_WORKSPACE_ID` env |
 | 4 | `AIRTABLE_API_KEY` env | — |
+
+<br>
+
+## Airtable Plan Requirements
+
+<details>
+<summary><b>API Scopes by Plan</b></summary>
+<br>
+
+| Scope | Free | Team | Business | Enterprise |
+|:------|:----:|:----:|:--------:|:----------:|
+| `data.records:read` | ✅ | ✅ | ✅ | ✅ |
+| `data.records:write` | ✅ | ✅ | ✅ | ✅ |
+| `data.recordComments:read` | ✅ | ✅ | ✅ | ✅ |
+| `data.recordComments:write` | ✅ | ✅ | ✅ | ✅ |
+| `schema.bases:read` | ✅ | ✅ | ✅ | ✅ |
+| `schema.bases:write` | ✅ | ✅ | ✅ | ✅ |
+| `webhook:manage` | ✅ | ✅ | ✅ | ✅ |
+| `user.email:read` | ✅ | ✅ | ✅ | ✅ |
+| `workspacesAndBases:read` | ❌ | ❌ | ✅ | ✅ |
+| `enterprise.*` scopes | ❌ | ❌ | ❌ | ✅ |
+
+</details>
+
+<details>
+<summary><b>API Rate Limits by Plan</b></summary>
+<br>
+
+| Plan | Monthly Calls | Rate Limit | Overage Behavior |
+|:-----|:--------------|:-----------|:-----------------|
+| **Free** | 1,000/month | 5 req/sec | 30-day grace period (once), then blocked |
+| **Team** | 100,000/month | 5 req/sec | Throttled to 2 req/sec until reset |
+| **Business** | Unlimited | 5 req/sec | — |
+| **Enterprise** | Unlimited | 5 req/sec | — |
+
+</details>
+
+<details>
+<summary><b>Tool Compatibility</b></summary>
+<br>
+
+| Tool | Required Scope | Min Plan |
+|:-----|:---------------|:---------|
+| `list_workspaces` | `workspacesAndBases:read` | Enterprise° |
+| `list_bases` | `schema.bases:read` | Free |
+| `get_base_schema` | `schema.bases:read` | Free |
+| `create_base` | `schema.bases:write` | Free |
+| `list_tables` | `schema.bases:read` | Free |
+| `create_table` | `schema.bases:write` | Free |
+| `update_table` | `schema.bases:write` | Free |
+| `create_field` | `schema.bases:write` | Free |
+| `update_field` | `schema.bases:write` | Free |
+| `get_records` | `data.records:read` | Free |
+| `get_record` | `data.records:read` | Free |
+| `create_records` | `data.records:write` | Free |
+| `update_record` | `data.records:write` | Free |
+| `delete_record` | `data.records:write` | Free |
+| `upsert_records` | `data.records:write` | Free |
+| `delete_records` | `data.records:write` | Free |
+| `upload_attachment` | `data.records:write` | Free |
+| `list_comments` | `data.recordComments:read` | Free |
+| `create_comment` | `data.recordComments:write` | Free |
+| `update_comment` | `data.recordComments:write` | Free |
+| `delete_comment` | `data.recordComments:write` | Free |
+
+° *Returns 404 on non-Enterprise plans. Workaround: Get workspace ID from Airtable UI URL (`airtable.com/wspXXX/...`)*
+
+</details>
 
 <br>
 
