@@ -420,11 +420,11 @@ After running e2e tests, always summarize results in a table format:
 |--------|--------|
 | Unit Tests | 272 passed |
 | E2E Tests | 25 passed |
-| Test Base | [Testing 8](https://airtable.com/appwrfoyFCetjF3H1) |
+| Test Base | Testing N (created automatically) |
 | Records Created | 204 |
 | Duration | 28s |
 
-**Note:** Test bases are preserved for review. Delete manually from Airtable when no longer needed.
+**Note:** Test bases are created with sequential names (Testing 1, Testing 2, etc.) and preserved for review. Delete manually from Airtable when no longer needed.
 
 ## Important Notes
 

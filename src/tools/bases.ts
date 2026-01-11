@@ -26,7 +26,7 @@ If you get a 404 error, get workspace ID from the Airtable UI URL instead:
 RETURNS:
 {
   "workspaces": [
-    { "id": "wspmhESAta6clCCwF", "name": "My Workspace", "permissionLevel": "owner" }
+    { "id": "wspXXXXXXXXXXXXXXX", "name": "My Workspace", "permissionLevel": "owner" }
   ]
 }`,
     parameters: z.object({

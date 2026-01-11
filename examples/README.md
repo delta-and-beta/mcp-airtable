@@ -80,7 +80,7 @@ This server natively supports both **stdio** (local) and **Streamable HTTP** (re
       "args": [
         "-y",
         "mcp-remote",
-        "https://mcp-airtable.tailb1bee0.ts.net/mcp",
+        "https://your-server.example.com/mcp",
         "--header",
         "x-airtable-api-key:patXXXXXXXXXXXXXX.YOUR_TOKEN_HERE",
         "--header",
@@ -220,7 +220,7 @@ docker run -p 3000:3000 \
 tailscale funnel 3000
 ```
 
-**Current deployment:** `https://mcp-airtable.tailb1bee0.ts.net/mcp`
+**Example deployment:** `https://your-server.example.com/mcp`
 
 ### Railway / Render / Fly.io
 
