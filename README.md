@@ -17,6 +17,16 @@
 - ✅ **Environment Validation** - Zod-validated configuration
 - ✅ **Sentry Integration** - Optional error tracking and request monitoring
 
+### Stability & Resilience
+- ✅ **Retry with Exponential Backoff** - Auto-retry on 429/5xx errors with jitter
+- ✅ **Circuit Breaker** - Prevents cascading failures (CLOSED/OPEN/HALF_OPEN states)
+- ✅ **Request Timeout** - Configurable timeout (30s default) with AbortController
+- ✅ **Connection Keep-Alive** - HTTP connection pooling via undici Agent
+- ✅ **Request Deduplication** - Shares results for identical concurrent requests
+- ✅ **Request Queue** - Concurrency control (5 concurrent requests default)
+- ✅ **Idempotency Keys** - Safe retries for write operations
+- ✅ **Health Checks** - Kubernetes-ready liveness/readiness probes
+
 ### Security Hardening
 - ✅ **Formula Injection Prevention** - Blocks EVAL, EXEC, SQL patterns
 - ✅ **Path Traversal Blocking** - Validates all file paths
@@ -159,7 +169,11 @@ src/
 │   ├── batch.ts          # upsert_records, delete_records
 │   └── comments.ts       # list_comments, create_comment, update_comment, delete_comment
 └── lib/                  # Utilities
-    ├── airtable.ts       # Airtable API client
+    ├── airtable/         # Modular Airtable client
+    │   ├── client.ts     # AirtableClient class
+    │   ├── fetch.ts      # fetchWithDetails utility
+    │   ├── types.ts      # Shared TypeScript interfaces
+    │   └── mime-types.ts # MIME type utilities
     ├── auth.ts           # API key & workspace ID extraction
     ├── validation.ts     # Security sanitization
     ├── errors.ts         # Custom error classes
@@ -167,10 +181,17 @@ src/
     ├── cache.ts          # Response caching
     ├── rate-limiter.ts   # Rate limiting
     ├── config.ts         # Environment validation
-    └── sentry.ts         # Error tracking (optional)
+    ├── sentry.ts         # Error tracking (optional)
+    ├── retry.ts          # Retry with exponential backoff
+    ├── circuit-breaker.ts # Circuit breaker pattern
+    ├── http-agent.ts     # Connection pooling
+    ├── health.ts         # Health check endpoints
+    ├── deduplication.ts  # Request deduplication
+    ├── request-queue.ts  # Concurrency control
+    └── idempotency.ts    # Idempotency keys
 ```
 
-**Total: ~15 files, ~1200 lines of production code, 133 unit tests**
+**Total: ~25 files, ~2500 lines of production code, 272 unit tests + 25 e2e tests**
 
 ## Usage Examples
 
@@ -215,6 +236,56 @@ The server uses FastMCP's `authenticate` callback to capture HTTP headers and st
 - ✅ **Path traversal blocking** - Validates all file paths
 - ✅ **Input validation** - Zod schemas for all parameters
 - ✅ **Base64 validation** - Size limits and format checking
+
+See [SECURITY.md](./SECURITY.md) for vulnerability reporting and security details.
+
+## Stability & Resilience
+
+The server includes enterprise-grade reliability features:
+
+### Retry with Exponential Backoff
+Automatically retries failed requests with intelligent backoff:
+- Retries on HTTP 429, 500, 502, 503, 504 errors
+- Retries on network errors (ECONNRESET, ETIMEDOUT, ECONNREFUSED)
+- Respects `Retry-After` header for rate limits
+- Configurable max retries (default: 3), delays, and jitter
+
+### Circuit Breaker
+Prevents cascading failures when Airtable API is degraded:
+- **CLOSED** - Normal operation, requests pass through
+- **OPEN** - Failing fast, rejects requests immediately
+- **HALF_OPEN** - Testing recovery with limited requests
+- Configurable failure threshold, reset timeout, success threshold
+
+### Request Timeout
+Prevents hanging requests:
+- Default 30 second timeout per request attempt
+- Each retry attempt gets fresh timeout
+- Uses AbortController for clean cancellation
+
+### Health Checks (Kubernetes-ready)
+Three endpoints for container orchestration:
+- `health_check` - Detailed status (circuit breakers, memory, uptime)
+- `liveness` - Simple alive check for k8s liveness probe
+- `readiness` - Service readiness for k8s readiness probe
+
+### Connection Keep-Alive
+HTTP connection pooling reduces latency:
+- Persistent connections via undici Agent
+- Configurable max connections (default: 10)
+- Connection stats in health check output
+
+### Request Deduplication
+Prevents duplicate API calls:
+- Shares results between identical concurrent GET requests
+- Reduces load on Airtable API
+- Automatic cleanup of expired pending requests
+
+### Request Queue
+Concurrency control prevents API overload:
+- Limits concurrent requests (default: 5)
+- Queues excess requests with timeout
+- Prevents overwhelming Airtable rate limits
 
 ## Development
 
